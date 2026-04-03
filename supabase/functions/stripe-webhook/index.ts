@@ -44,17 +44,17 @@ Deno.serve(async (req) => {
   const rawBody = await req.text()
   console.log("raw body length", rawBody.length)
 
-  // Webhook verification only uses constructEvent (no Stripe HTTP calls here).
+  // Webhook verification only uses constructEventAsync (no Stripe HTTP calls here).
   const stripe = new Stripe(stripeSecretKey)
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret)
+    event = await stripe.webhooks.constructEventAsync(rawBody, sig, webhookSecret)
     console.log("stripe signature ok, event type:", event.type)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     const stack = e instanceof Error ? e.stack : undefined
-    console.error("constructEvent failed:", msg, stack ?? "")
+    console.error("constructEventAsync failed:", msg, stack ?? "")
     return new Response(
       JSON.stringify({ error: "Webhook signature verification failed", detail: msg }),
       { status: 400, headers: { "Content-Type": "application/json" } },
