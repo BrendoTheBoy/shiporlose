@@ -25,6 +25,9 @@ export type ProjectRow = {
   review_started_at?: string | null
   shipped_at?: string | null
   abandoned_at?: string | null
+  payout_email: string | null
+  payout_sent: boolean
+  payout_amount: number | null
 }
 
 export type ProjectInsert = {
@@ -47,6 +50,9 @@ export type ProjectInsert = {
   review_started_at?: string | null
   shipped_at?: string | null
   abandoned_at?: string | null
+  payout_email?: string | null
+  payout_sent?: boolean
+  payout_amount?: number | null
 }
 
 export type CommitRow = {

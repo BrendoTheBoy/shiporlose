@@ -93,3 +93,32 @@ curl -X POST "https://<SUPABASE_URL>/functions/v1/resolve-projects" \
 `<SUPABASE_URL>` is your project URL (e.g. `https://xxxxx.supabase.co`). The same host works for the Functions gateway.
 
 Later you can schedule this (Supabase cron, GitHub Actions, or another scheduler) to run every hour.
+
+---
+
+## 5. View all winners awaiting payout
+
+```sql
+SELECT p.id, p.project_name, p.github_username, p.payout_email, p.shipped_at,
+       pool.total_amount AS pool_total,
+       (pool.total_amount * 0.8) / (SELECT count(*) FROM projects WHERE status = 'shipped' AND date_trunc('month', deadline) = pool.month) AS payout_amount
+FROM projects p
+JOIN pools pool ON pool.month = date_trunc('month', p.deadline)::date
+WHERE p.status = 'shipped' AND p.payout_sent = false AND p.payout_email IS NOT NULL;
+```
+
+---
+
+## 6. Mark payout as sent for a project
+
+```sql
+UPDATE projects SET payout_sent = true, payout_amount = <AMOUNT> WHERE id = '<PROJECT_ID>';
+```
+
+---
+
+## 7. Mark all payouts as sent for a month
+
+```sql
+UPDATE projects SET payout_sent = true WHERE status = 'shipped' AND payout_sent = false AND payout_email IS NOT NULL AND date_trunc('month', deadline) = '<YYYY-MM-01>';
+```

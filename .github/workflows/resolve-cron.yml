@@ -1,0 +1,25 @@
+# Calls the Supabase `resolve-projects` Edge Function on a schedule so project
+# deadlines and review windows are processed automatically.
+#
+# Setup (GitHub repo → Settings → Secrets and variables → Actions):
+#   RESOLVE_URL — full POST URL, e.g.
+#     https://ubnxrmymtdgvrrzykfed.supabase.co/functions/v1/resolve-projects
+#   RESOLVE_SECRET — same value as RESOLVE_SECRET in Supabase (Edge Function auth header).
+
+name: Resolve projects (cron)
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST resolve-projects
+        run: |
+          curl -X POST "${{ secrets.RESOLVE_URL }}" \
+            -H "X-Resolve-Secret: ${{ secrets.RESOLVE_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail --silent --show-error
