@@ -11,7 +11,7 @@ export function LogWorkInput({
 }: {
   projectId: string
   onDone: () => void
-  /** Inside activity terminal: no outer frame, bottom border only. */
+  /** Inside activity terminal: single-line prompt, no card frame. */
   variant?: "default" | "terminal"
 }) {
   const { user } = useAuth()
@@ -40,25 +40,54 @@ export function LogWorkInput({
     onDone()
   }
 
-  const shell =
-    variant === "terminal"
-      ? "mb-0 border-b-2 border-[#1a3d1a] bg-[#050805] px-2 pb-3 pt-1"
-      : "mb-8 border-4 border-[#1a3d1a] bg-[#050805] p-4"
+  if (variant === "terminal") {
+    return (
+      <div className="mb-0 border-b border-[#1a1a1a] pb-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="shrink-0 select-none font-mono text-[10px] text-[#39FF14]">
+            &gt;
+          </span>
+          <input
+            type="text"
+            value={content}
+            maxLength={MAX}
+            onChange={(e) => setContent(e.target.value.slice(0, MAX))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                void submit()
+              }
+            }}
+            placeholder="log entry (max 200 chars)"
+            className="min-w-0 flex-1 border-0 bg-transparent font-mono text-[10px] text-[#39FF14] placeholder:text-[#2a4a2a] focus:outline-none focus:ring-0"
+          />
+          <button
+            type="button"
+            disabled={saving || !content.trim()}
+            onClick={() => void submit()}
+            className="shrink-0 border border-[#39FF14] bg-[#0a0a0a] px-2 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wide text-[#39FF14] hover:bg-[#0f1f0f] disabled:opacity-50"
+          >
+            {saving ? "…" : "OK"}
+          </button>
+        </div>
+        <div className="mt-1 flex min-h-[14px] items-start justify-end gap-2">
+          {err && (
+            <p className="mr-auto font-mono text-[9px] text-red-400">{err}</p>
+          )}
+          <p className="font-mono text-[8px] text-[#3a3a3a] tabular-nums">
+            {content.length}/{MAX}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className={shell}>
-      {variant !== "terminal" && (
-        <p className="font-mono text-[9px] font-semibold uppercase tracking-wide text-[#5ddf5d]">
-          LOG WORK (non-code progress)
-        </p>
-      )}
-      <div
-        className={
-          variant === "terminal"
-            ? "mt-0 flex flex-col gap-1.5 sm:flex-row sm:items-center"
-            : "mt-3 flex flex-col gap-2 sm:flex-row sm:items-center"
-        }
-      >
+    <div className="mb-8 border-4 border-[#1a3d1a] bg-[#050805] p-4">
+      <p className="font-mono text-[9px] font-semibold uppercase tracking-wide text-[#5ddf5d]">
+        LOG WORK (non-code progress)
+      </p>
+      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
         <label className="flex min-w-0 flex-1 items-center gap-1 font-mono text-[11px] text-[#39FF14]">
           <span className="shrink-0 select-none">&gt;</span>
           <input

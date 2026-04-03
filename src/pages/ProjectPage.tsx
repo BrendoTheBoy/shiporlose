@@ -413,22 +413,26 @@ export function ProjectPage() {
       <article
         className={`border-4 bg-[#0d0d0d] p-4 shadow-[6px_6px_0_#111] md:p-5 ${frame}`}
       >
-        {/* Header: avatar + identity + badges on one row */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <img
-            src={avatarUrl}
-            alt=""
-            className="h-12 w-12 shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] object-cover sm:h-14 sm:w-14"
-            width={56}
-            height={56}
-          />
-          <span className="font-mono text-[9px] text-[#666]">
-            @{project.github_username}
-          </span>
-          <h1 className="font-display min-w-0 flex-1 text-[11px] leading-tight text-[#39FF14] sm:text-xs">
-            {project.project_name}
-          </h1>
-          <div className="flex w-full flex-wrap items-center gap-1.5 sm:ml-auto sm:w-auto sm:justify-end">
+        {/* Header: avatar | username+title | status + claim */}
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#1a1a1a] pb-3">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <img
+              src={avatarUrl}
+              alt=""
+              className="h-12 w-12 shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] object-cover sm:h-14 sm:w-14"
+              width={56}
+              height={56}
+            />
+            <div className="min-w-0">
+              <p className="font-mono text-[9px] uppercase tracking-wide text-[#666]">
+                @{project.github_username}
+              </p>
+              <h1 className="font-display mt-0.5 text-[11px] leading-tight text-[#39FF14] sm:text-xs">
+                {project.project_name}
+              </h1>
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
             {project.status === "pending_review" && (
               <span className="font-mono text-[9px] uppercase tracking-wide border border-[#cc8800] bg-[#1a1200] px-1.5 py-0.5 text-[#FFAA00]">
                 UNDER REVIEW
@@ -454,17 +458,26 @@ export function ProjectPage() {
                 ACTIVE
               </span>
             )}
+            {canClaimShip && (
+              <button
+                type="button"
+                onClick={() => setClaimOpen(true)}
+                className="border border-[#39FF14] bg-[#0a0a0a] px-2 py-1 font-mono text-[8px] font-bold uppercase leading-none tracking-wide text-[#39FF14] hover:bg-[#0f1f0f]"
+              >
+                CLAIM SHIPPED
+              </button>
+            )}
           </div>
         </div>
 
         {showThreeDayPulse && (
-          <p className="font-mono mt-1.5 animate-pulse text-[9px] uppercase tracking-wide text-[#FF6B00]">
+          <p className="font-mono mt-2 animate-pulse text-[9px] uppercase tracking-wide text-[#FF6B00]">
             ⚠ 3 DAYS LEFT — SHIP OR LOSE
           </p>
         )}
 
         {/* Status bar */}
-        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[#2a2a2a] pt-2 font-mono text-[9px] leading-snug text-[#888]">
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[9px] leading-snug text-[#888]">
           <span className="min-w-0">{statusContext}</span>
           <span className="text-[#333] select-none" aria-hidden="true">
             |
@@ -492,7 +505,34 @@ export function ProjectPage() {
           </a>
         </div>
 
-        <div className="mt-4 border-4 border-[#FF6B00] bg-[#080400] p-3 shadow-[inset_0_0_0_1px_rgba(255,107,0,0.3)]">
+        <div className="mt-3">
+          <p className="font-mono text-[8px] font-semibold uppercase tracking-widest text-[#555]">
+            DESCRIPTION:
+          </p>
+          <p className="font-body mt-1 text-[13px] leading-relaxed text-[#888]">
+            {project.description}
+          </p>
+        </div>
+
+        <div className="mt-3 border-t border-[#2a2a2a] pt-2">
+          <p className="font-mono text-[8px] uppercase tracking-wide text-[#555]">
+            {Math.round(prog * 100)}% OF WINDOW ELAPSED
+          </p>
+          <div className="mt-1">
+            <ProgressBar
+              value={prog}
+              compact
+              atRisk={
+                atRisk &&
+                project.status !== "shipped" &&
+                project.status !== "abandoned"
+              }
+              muted={project.status === "abandoned"}
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 border-2 border-[#FF6B00] bg-[#080400] p-3 shadow-[inset_0_0_0_1px_rgba(255,107,0,0.3)]">
           <p className="font-mono text-[9px] font-bold uppercase tracking-wide text-[#FF6B00]">
             SHIPPED MEANS (PUBLIC CONTRACT)
           </p>
@@ -515,44 +555,8 @@ export function ProjectPage() {
           </p>
         )}
 
-        <div className="mt-3">
-          <p className="font-mono text-[8px] font-semibold uppercase tracking-widest text-[#555]">
-            DESCRIPTION:
-          </p>
-          <p className="font-body mt-1 text-[13px] leading-relaxed text-[#888]">
-            {project.description}
-          </p>
-        </div>
-
-        <div className="mt-3 border-t border-[#2a2a2a] pt-2">
-          <p className="font-mono text-[8px] uppercase tracking-wide text-[#555]">
-            {Math.round(prog * 100)}% of window elapsed
-          </p>
-          <div className="mt-1">
-            <ProgressBar
-              value={prog}
-              compact
-              atRisk={
-                atRisk &&
-                project.status !== "shipped" &&
-                project.status !== "abandoned"
-              }
-              muted={project.status === "abandoned"}
-            />
-          </div>
-        </div>
-
         {own && (
           <div className="mt-3 space-y-3 border-t border-[#2a2a2a] pt-3">
-            {canClaimShip && (
-              <button
-                type="button"
-                onClick={() => setClaimOpen(true)}
-                className="w-full border-4 border-[#39FF14] bg-[#0a0a0a] py-2 font-mono text-[10px] font-bold uppercase tracking-wide text-[#39FF14] shadow-[3px_3px_0_#0a1f0a] hover:bg-[#0f1f0f] sm:w-auto sm:px-6"
-              >
-                CLAIM SHIPPED
-              </button>
-            )}
             {project.status === "pending_review" && (
               <p className="font-mono text-[9px] leading-relaxed text-[#888]">
                 YOUR SUBMISSION IS IN THE 48-HOUR COMMUNITY REVIEW WINDOW.
@@ -590,13 +594,11 @@ export function ProjectPage() {
           )}
       </article>
 
-      <div className="mt-5 border-4 border-[#39FF14] bg-[#050805] shadow-[inset_0_0_0_1px_#1a3d1a]">
-        <div className="border-b-2 border-[#2a4a2a] bg-[#0a120a] px-2 py-1">
-          <span className="font-mono text-[9px] font-bold uppercase tracking-wide text-[#39FF14]">
-            ACTIVITY LOG
-          </span>
-        </div>
-        <div className="p-2 md:p-3">
+      <div className="relative mt-5 border border-[#39FF14] bg-[#050805]">
+        <span className="absolute -top-2 left-3 z-10 bg-[#0a0a0a] px-1 font-mono text-[8px] uppercase tracking-wide text-[#39FF14]">
+          ACTIVITY LOG
+        </span>
+        <div className="px-2 pb-2 pt-3">
           {showLogWork && (
             <LogWorkInput
               variant="terminal"
@@ -606,7 +608,7 @@ export function ProjectPage() {
           )}
 
           {activity.length === 0 ? (
-            <p className="font-mono px-1 py-4 text-center text-[9px] text-[#555]">
+            <p className="font-mono px-1 py-3 text-center text-[9px] text-[#555]">
               No activity yet. Start building and your commits will appear here.
             </p>
           ) : (
