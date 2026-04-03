@@ -5,7 +5,7 @@ export function Footer() {
         ShipOrLose is the first project shipped using ShipOrLose.
       </p>
       <p className="font-body mx-auto max-w-xl text-xs leading-relaxed text-[#666]">
-        Built in one weekend by [your name]. Yes, I used ShipOrLose to ship
+        Built in one weekend by Brendan McGrath. Yes, I used ShipOrLose to ship
         ShipOrLose.
       </p>
       <p className="mt-4">
