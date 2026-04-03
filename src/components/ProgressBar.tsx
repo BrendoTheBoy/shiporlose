@@ -2,15 +2,19 @@ export function ProgressBar({
   value,
   atRisk,
   muted,
+  compact,
 }: {
   value: number
   atRisk: boolean
   muted?: boolean
+  /** Tighter bar for dense layouts (e.g. project page). */
+  compact?: boolean
 }) {
   const pct = Math.round(value * 100)
+  const h = compact ? "h-2" : "h-3"
   return (
     <div
-      className={`h-3 w-full border-2 ${
+      className={`${h} w-full border-2 ${
         muted
           ? "border-[#444]"
           : atRisk

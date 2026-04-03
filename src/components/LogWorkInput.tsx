@@ -7,9 +7,12 @@ const MAX = 200
 export function LogWorkInput({
   projectId,
   onDone,
+  variant = "default",
 }: {
   projectId: string
   onDone: () => void
+  /** Inside activity terminal: no outer frame, bottom border only. */
+  variant?: "default" | "terminal"
 }) {
   const { user } = useAuth()
   const [content, setContent] = useState("")
@@ -37,12 +40,25 @@ export function LogWorkInput({
     onDone()
   }
 
+  const shell =
+    variant === "terminal"
+      ? "mb-0 border-b-2 border-[#1a3d1a] bg-[#050805] px-2 pb-3 pt-1"
+      : "mb-8 border-4 border-[#1a3d1a] bg-[#050805] p-4"
+
   return (
-    <div className="mb-8 border-4 border-[#1a3d1a] bg-[#050805] p-4">
-      <p className="font-mono text-[9px] font-semibold uppercase tracking-wide text-[#5ddf5d]">
-        LOG WORK (non-code progress)
-      </p>
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+    <div className={shell}>
+      {variant !== "terminal" && (
+        <p className="font-mono text-[9px] font-semibold uppercase tracking-wide text-[#5ddf5d]">
+          LOG WORK (non-code progress)
+        </p>
+      )}
+      <div
+        className={
+          variant === "terminal"
+            ? "mt-0 flex flex-col gap-1.5 sm:flex-row sm:items-center"
+            : "mt-3 flex flex-col gap-2 sm:flex-row sm:items-center"
+        }
+      >
         <label className="flex min-w-0 flex-1 items-center gap-1 font-mono text-[11px] text-[#39FF14]">
           <span className="shrink-0 select-none">&gt;</span>
           <input
@@ -57,14 +73,14 @@ export function LogWorkInput({
               }
             }}
             placeholder="Ship log entry (max 200 chars)"
-            className="min-w-0 flex-1 border-0 bg-transparent font-mono text-[11px] text-[#39FF14] placeholder:text-[#2a4a2a] focus:outline-none focus:ring-0"
+            className="min-w-0 flex-1 border-0 bg-transparent font-mono text-[10px] text-[#39FF14] placeholder:text-[#2a4a2a] focus:outline-none focus:ring-0 sm:text-[11px]"
           />
         </label>
         <button
           type="button"
           disabled={saving || !content.trim()}
           onClick={() => void submit()}
-          className="shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] px-4 py-2 font-mono text-[10px] font-bold uppercase tracking-wide text-[#39FF14] hover:bg-[#0f1f0f] disabled:opacity-50"
+          className="shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] px-3 py-1.5 font-mono text-[9px] font-bold uppercase tracking-wide text-[#39FF14] hover:bg-[#0f1f0f] disabled:opacity-50 sm:px-4 sm:py-2 sm:text-[10px]"
         >
           {saving ? "…" : "SUBMIT"}
         </button>
