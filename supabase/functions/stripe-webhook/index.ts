@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient } from "npm:@supabase/supabase-js@2"
-import Stripe from "npm:stripe@14.25.0"
+import Stripe from "https://esm.sh/stripe@14.25.0?target=deno"
 
 function firstOfMonthUtcDate(): string {
   const d = new Date()
@@ -10,26 +10,55 @@ function firstOfMonthUtcDate(): string {
 }
 
 Deno.serve(async (req) => {
-  const sig = req.headers.get("stripe-signature")
-  const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET")
-  const secret = Deno.env.get("STRIPE_SECRET_KEY")
+  console.log("webhook received", { method: req.method })
 
-  if (!sig || !webhookSecret || !secret) {
-    return new Response("Webhook not configured", { status: 400 })
+  const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET")
+  const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY")
+
+  console.log("env check", {
+    hasWebhookSecret: Boolean(webhookSecret),
+    hasStripeSecretKey: Boolean(stripeSecretKey),
+  })
+
+  const sig =
+    req.headers.get("stripe-signature") ??
+    req.headers.get("Stripe-Signature")
+
+  if (!sig) {
+    console.error("missing stripe-signature header")
+    return new Response(
+      JSON.stringify({ error: "Missing stripe-signature header" }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    )
   }
 
-  const rawBody = await req.text()
+  if (!webhookSecret || !stripeSecretKey) {
+    console.error("missing STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY")
+    return new Response(
+      JSON.stringify({ error: "Webhook not configured" }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    )
+  }
 
-  const stripe = new Stripe(secret, {
-    httpClient: Stripe.createFetchHttpClient(),
-  })
+  // Must be the raw body string — never JSON.parse before verification.
+  const rawBody = await req.text()
+  console.log("raw body length", rawBody.length)
+
+  // Webhook verification only uses constructEvent (no Stripe HTTP calls here).
+  const stripe = new Stripe(stripeSecretKey)
 
   let event: Stripe.Event
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret)
+    console.log("stripe signature ok, event type:", event.type)
   } catch (e) {
-    console.error(e)
-    return new Response("Webhook signature verification failed", { status: 400 })
+    const msg = e instanceof Error ? e.message : String(e)
+    const stack = e instanceof Error ? e.stack : undefined
+    console.error("constructEvent failed:", msg, stack ?? "")
+    return new Response(
+      JSON.stringify({ error: "Webhook signature verification failed", detail: msg }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    )
   }
 
   if (event.type === "checkout.session.completed") {
@@ -38,6 +67,7 @@ Deno.serve(async (req) => {
 
     const user_id = md.user_id
     if (!user_id) {
+      console.log("checkout.session.completed: no user_id in metadata, acking")
       return new Response(JSON.stringify({ received: true }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -87,7 +117,7 @@ Deno.serve(async (req) => {
           headers: { "Content-Type": "application/json" },
         })
       }
-      console.error(rpcErr)
+      console.error("rpc error:", rpcErr.message, rpcErr)
       return new Response(JSON.stringify({ error: rpcErr.message }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
