@@ -22,12 +22,17 @@ create table public.projects (
   payment_intent_id text,
   created_at timestamptz not null default now(),
   deadline timestamptz not null,
+  review_started_at timestamptz,
+  shipped_at timestamptz,
+  abandoned_at timestamptz,
   constraint projects_project_name_len check (char_length(project_name) <= 30),
   constraint projects_description_len check (char_length(description) <= 100),
   constraint projects_shipped_when_len check (char_length(shipped_when) <= 100),
   constraint projects_stake_amount_check check (stake_amount = 30),
   constraint projects_stake_status_check check (stake_status in ('held', 'returned', 'forfeited')),
-  constraint projects_status_check check (status in ('active', 'shipped', 'abandoned'))
+  constraint projects_status_check check (
+    status in ('active', 'pending_review', 'flagged', 'shipped', 'abandoned')
+  )
 );
 
 create unique index projects_stripe_session_id_unique
@@ -52,6 +57,18 @@ create table public.checkins (
   created_at timestamptz not null default now(),
   constraint checkins_content_len check (char_length(content) <= 200)
 );
+
+create table public.flags (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects (id) on delete cascade,
+  user_id uuid not null references auth.users (id) on delete cascade,
+  reason text not null,
+  created_at timestamptz not null default now(),
+  constraint flags_reason_len check (char_length(reason) <= 300),
+  constraint flags_project_user_unique unique (project_id, user_id)
+);
+
+create index flags_project_id_idx on public.flags (project_id);
 
 create table public.pools (
   id uuid primary key default gen_random_uuid(),
@@ -117,16 +134,17 @@ set search_path = public
 as $$
 declare
   v_id uuid;
-  v_active int;
+  v_in_flight int;
 begin
   select id into v_id from public.projects where stripe_session_id = p_stripe_session_id limit 1;
   if v_id is not null then
     return v_id;
   end if;
 
-  select count(*)::int into v_active from public.projects
-  where user_id = p_user_id and status = 'active';
-  if v_active > 0 then
+  select count(*)::int into v_in_flight from public.projects
+  where user_id = p_user_id
+    and status in ('active', 'pending_review', 'flagged');
+  if v_in_flight > 0 then
     raise exception 'user_already_has_active_project';
   end if;
 
@@ -164,6 +182,7 @@ alter table public.projects enable row level security;
 alter table public.commits enable row level security;
 alter table public.checkins enable row level security;
 alter table public.pools enable row level security;
+alter table public.flags enable row level security;
 
 -- projects: public read; owner update; inserts via Stripe webhook only
 create policy "projects_select_public"
@@ -209,3 +228,18 @@ create policy "checkins_insert_owner"
 create policy "pools_select_public"
   on public.pools for select
   using (true);
+
+create policy "flags_select_public"
+  on public.flags for select
+  using (true);
+
+create policy "flags_insert_authenticated_not_owner"
+  on public.flags for insert
+  with check (
+    auth.uid() is not null
+    and auth.uid() = user_id
+    and not exists (
+      select 1 from public.projects p
+      where p.id = project_id and p.user_id = auth.uid()
+    )
+  );

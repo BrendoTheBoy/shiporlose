@@ -1,3 +1,10 @@
+export type ProjectStatus =
+  | "active"
+  | "pending_review"
+  | "flagged"
+  | "shipped"
+  | "abandoned"
+
 export type ProjectRow = {
   id: string
   user_id: string
@@ -9,12 +16,15 @@ export type ProjectRow = {
   repo_full_name: string
   stake_amount: number
   stake_status: string
-  status: string
+  status: ProjectStatus
   proof_url: string | null
   stripe_session_id: string | null
   payment_intent_id: string | null
   created_at: string
   deadline: string
+  review_started_at?: string | null
+  shipped_at?: string | null
+  abandoned_at?: string | null
 }
 
 export type ProjectInsert = {
@@ -34,6 +44,9 @@ export type ProjectInsert = {
   payment_intent_id?: string | null
   created_at?: string
   deadline?: string
+  review_started_at?: string | null
+  shipped_at?: string | null
+  abandoned_at?: string | null
 }
 
 export type CommitRow = {
@@ -58,6 +71,14 @@ export type CheckinInsert = {
   project_id: string
   user_id: string
   content: string
+}
+
+export type FlagRow = {
+  id: string
+  project_id: string
+  user_id: string
+  reason: string
+  created_at: string
 }
 
 export type PoolRow = {
@@ -93,6 +114,21 @@ export type Database = {
         }
         Insert: CheckinInsert
         Update: Partial<CheckinInsert>
+        Relationships: []
+      }
+      flags: {
+        Row: FlagRow
+        Insert: {
+          id?: string
+          project_id: string
+          user_id: string
+          reason: string
+          created_at?: string
+        }
+        Update: Partial<{
+          reason: string
+          created_at: string
+        }>
         Relationships: []
       }
       pools: {

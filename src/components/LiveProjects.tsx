@@ -2,13 +2,27 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 import { syncCommitsForProject } from "../lib/syncCommits"
-import { formatRelativeTime, truncateText } from "../lib/time"
-import type { CommitRow, ProjectRow } from "../types/database"
+import {
+  formatRelativeTime,
+  formatReviewCountdownMs,
+  reviewWindowEndsAt,
+  truncateText,
+} from "../lib/time"
+import type { CommitRow, ProjectRow, ProjectStatus } from "../types/database"
 import { AsciiDivider } from "./AsciiDivider"
+import { ClaimShippedModal } from "./ClaimShippedModal"
 
 type ProjectWithCommits = ProjectRow & {
   commits: CommitRow[]
 }
+
+const FEED_STATUSES: ProjectStatus[] = [
+  "active",
+  "pending_review",
+  "flagged",
+  "shipped",
+  "abandoned",
+]
 
 const MOCK: {
   name: string
@@ -51,21 +65,31 @@ const MOCK: {
 function ProgressBar({
   value,
   atRisk,
+  muted,
 }: {
   value: number
   atRisk: boolean
+  muted?: boolean
 }) {
   const pct = Math.round(value * 100)
   return (
     <div
-      className={`h-3 w-full border-2 ${atRisk ? "border-[#FF6B00]" : "border-[#2a4a2a]"}`}
+      className={`h-3 w-full border-2 ${
+        muted
+          ? "border-[#444]"
+          : atRisk
+            ? "border-[#FF6B00]"
+            : "border-[#2a4a2a]"
+      }`}
       role="progressbar"
       aria-valuenow={pct}
       aria-valuemin={0}
       aria-valuemax={100}
     >
       <div
-        className={`h-full transition-all ${atRisk ? "bg-[#FF6B00]" : "bg-[#39FF14]"}`}
+        className={`h-full transition-all ${
+          muted ? "bg-[#555]" : atRisk ? "bg-[#FF6B00]" : "bg-[#39FF14]"
+        }`}
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -76,6 +100,10 @@ function daysLeftUntil(deadlineIso: string): number {
   const deadline = new Date(deadlineIso).getTime()
   const now = Date.now()
   return Math.max(0, Math.ceil((deadline - now) / 86400000))
+}
+
+function deadlinePassed(deadlineIso: string): boolean {
+  return new Date(deadlineIso).getTime() < Date.now()
 }
 
 function progressElapsed(project: ProjectRow): number {
@@ -98,6 +126,32 @@ function isAtRisk(project: ProjectRow, commits: CommitRow[]): boolean {
     return now - new Date(last.committed_at).getTime() >= seven
   }
   return now - new Date(project.created_at).getTime() >= seven
+}
+
+function cardFrameClass(
+  status: ProjectStatus,
+  atRisk: boolean,
+  passed: boolean,
+): string {
+  if (status === "abandoned") {
+    return "border-[#3a3a3a] opacity-[0.72]"
+  }
+  if (status === "shipped") {
+    return "border-[#39FF14] shadow-[0_0_28px_rgba(57,255,20,0.14)]"
+  }
+  if (status === "flagged") {
+    return "border-[#aa3300] shadow-[inset_0_0_32px_rgba(80,0,0,0.2)]"
+  }
+  if (status === "pending_review") {
+    return "border-[#cc8800]"
+  }
+  if (passed && status === "active") {
+    return "border-red-800"
+  }
+  if (atRisk) {
+    return "border-[#FF6B00]"
+  }
+  return "border-[#2a2a2a]"
 }
 
 function CheckinControl({
@@ -190,9 +244,24 @@ function CheckinControl({
 export function LiveProjects() {
   const { user, githubAccessToken } = useAuth()
   const [rows, setRows] = useState<ProjectWithCommits[]>([])
+  const [flagCounts, setFlagCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [fetchErr, setFetchErr] = useState<string | null>(null)
   const syncedRef = useRef<Set<string>>(new Set())
+  const [claimModalId, setClaimModalId] = useState<string | null>(null)
+  const [proofSuccessId, setProofSuccessId] = useState<string | null>(null)
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    const id = window.setInterval(() => setTick((t) => t + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    if (!proofSuccessId) return
+    const t = window.setTimeout(() => setProofSuccessId(null), 12000)
+    return () => window.clearTimeout(t)
+  }, [proofSuccessId])
 
   const load = useCallback(async () => {
     setFetchErr(null)
@@ -200,21 +269,23 @@ export function LiveProjects() {
     const { data: projects, error: pErr } = await supabase
       .from("projects")
       .select("*")
-      .eq("status", "active")
+      .in("status", FEED_STATUSES)
       .order("created_at", { ascending: false })
       .limit(20)
 
     if (pErr) {
       setFetchErr(pErr.message)
       setRows([])
+      setFlagCounts({})
       setLoading(false)
       return
     }
 
-    const plist = projects ?? []
+    const plist = (projects ?? []) as ProjectRow[]
     const ids = plist.map((p) => p.id)
     if (ids.length === 0) {
       setRows([])
+      setFlagCounts({})
       setLoading(false)
       return
     }
@@ -227,9 +298,30 @@ export function LiveProjects() {
     if (cErr) {
       setFetchErr(cErr.message)
       setRows([])
+      setFlagCounts({})
       setLoading(false)
       return
     }
+
+    const { data: flagRows, error: fErr } = await supabase
+      .from("flags")
+      .select("project_id")
+      .in("project_id", ids)
+
+    if (fErr) {
+      setFetchErr(fErr.message)
+      setRows([])
+      setFlagCounts({})
+      setLoading(false)
+      return
+    }
+
+    const counts: Record<string, number> = {}
+    for (const f of flagRows ?? []) {
+      const pid = (f as { project_id: string }).project_id
+      counts[pid] = (counts[pid] ?? 0) + 1
+    }
+    setFlagCounts(counts)
 
     const byProject = new Map<string, CommitRow[]>()
     for (const id of ids) byProject.set(id, [])
@@ -275,7 +367,13 @@ export function LiveProjects() {
   useEffect(() => {
     if (!user || !githubAccessToken || rows.length === 0) return
 
-    const mine = rows.filter((p) => p.user_id === user.id)
+    const mine = rows.filter(
+      (p) =>
+        p.user_id === user.id &&
+        (p.status === "active" ||
+          p.status === "pending_review" ||
+          p.status === "flagged"),
+    )
     const pending = mine.filter((p) => !syncedRef.current.has(p.id))
     if (pending.length === 0) return
 
@@ -302,14 +400,27 @@ export function LiveProjects() {
     return () => {
       cancelled = true
     }
-    // rows omitted on purpose: projectIdsKey tracks id set; avoids re-sync on commit refetch
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, githubAccessToken, projectIdsKey, load])
 
   const showMock = !loading && rows.length === 0 && !fetchErr
 
+  const claimProject = rows.find((r) => r.id === claimModalId)
+
   return (
     <section className="border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20">
+      {claimProject && (
+        <ClaimShippedModal
+          open={!!claimModalId}
+          projectId={claimProject.id}
+          shippedWhen={claimProject.shipped_when}
+          onClose={() => setClaimModalId(null)}
+          onSuccess={() => {
+            setProofSuccessId(claimProject.id)
+            void load()
+          }}
+        />
+      )}
       <AsciiDivider label="LIVE PROJECTS — PUBLIC FEED" />
       <div className="mx-auto mt-10 max-w-5xl">
         <h2 className="font-display mb-10 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
@@ -334,16 +445,29 @@ export function LiveProjects() {
               const topCommits = p.commits.slice(0, 3)
               const totalCommits = p.commits.length
               const dl = daysLeftUntil(p.deadline)
-              const prog = progressElapsed(p)
+              const passed = deadlinePassed(p.deadline)
               const own = user?.id === p.user_id
               const avatarUrl = `https://github.com/${p.github_username}.png`
+              const prog =
+                p.status === "shipped" || p.status === "abandoned"
+                  ? 1
+                  : progressElapsed(p)
+              const frame = cardFrameClass(p.status, atRisk, passed)
+              const flags = flagCounts[p.id] ?? 0
+              const reviewEnd = reviewWindowEndsAt(p.review_started_at)
+              const reviewLeftMs =
+                reviewEnd != null ? reviewEnd - Date.now() : 0
+              const showThreeDayPulse =
+                p.status === "active" && !passed && dl > 0 && dl <= 3
+              const canClaimShip =
+                own && p.status === "active" && !passed
+              const showDeadlinePassed = own && p.status === "active" && passed
+              const canCheckIn = own && p.status === "active" && !passed
 
               return (
                 <article
                   key={p.id}
-                  className={`card-lift flex flex-col border-2 bg-[#0d0d0d] p-5 shadow-[4px_4px_0_#111] ${
-                    atRisk ? "border-[#FF6B00]" : "border-[#2a2a2a]"
-                  }`}
+                  className={`card-lift flex flex-col border-2 bg-[#0d0d0d] p-5 shadow-[4px_4px_0_#111] ${frame}`}
                 >
                   <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                     <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -358,17 +482,60 @@ export function LiveProjects() {
                         {p.project_name}
                       </h3>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {p.status === "pending_review" && (
+                        <span className="font-mono text-[10px] uppercase tracking-wide border border-[#cc8800] bg-[#1a1200] px-2 py-0.5 text-[#FFAA00]">
+                          UNDER REVIEW
+                        </span>
+                      )}
+                      {p.status === "shipped" && (
+                        <span className="font-mono text-[10px] uppercase tracking-wide border border-[#2a6a2a] bg-[#081008] px-2 py-0.5 text-[#39FF14]">
+                          SHIPPED
+                        </span>
+                      )}
+                      {p.status === "abandoned" && (
+                        <span className="font-mono text-[10px] uppercase tracking-wide border border-red-900 bg-[#180808] px-2 py-0.5 text-red-400">
+                          ABANDONED
+                        </span>
+                      )}
+                      {p.status === "flagged" && (
+                        <span className="font-mono text-[10px] uppercase tracking-wide border border-[#992200] bg-[#1a0800] px-2 py-0.5 text-[#ff5555]">
+                          UNDER INVESTIGATION
+                        </span>
+                      )}
                       <span className="font-mono text-[10px] uppercase tabular-nums text-[#39FF14] border border-[#2a4a2a] bg-[#080808] px-2 py-0.5">
                         commits: {totalCommits}
                       </span>
-                      {atRisk && (
-                        <span className="font-mono text-[10px] uppercase tracking-wide text-[#FF6B00]">
-                          ⚠ AT RISK
-                        </span>
-                      )}
+                      {atRisk &&
+                        (p.status === "active" ||
+                          p.status === "pending_review" ||
+                          p.status === "flagged") && (
+                          <span className="font-mono text-[10px] uppercase tracking-wide text-[#FF6B00]">
+                            ⚠ AT RISK
+                          </span>
+                        )}
                     </div>
                   </div>
+
+                  {showThreeDayPulse && (
+                    <p className="font-mono mb-2 animate-pulse text-[10px] uppercase tracking-wide text-[#FF6B00]">
+                      ⚠ 3 DAYS LEFT — SHIP OR LOSE
+                    </p>
+                  )}
+
+                  {showDeadlinePassed && (
+                    <p className="font-mono mb-2 text-[10px] uppercase tracking-wide text-red-500">
+                      DEADLINE PASSED
+                    </p>
+                  )}
+
+                  {proofSuccessId === p.id && (
+                    <p className="font-mono mb-3 border-2 border-[#39FF14] bg-[#081008] p-2 text-[10px] leading-relaxed text-[#39FF14]">
+                      PROOF SUBMITTED. 48-HOUR REVIEW WINDOW IS NOW OPEN. IF NO ONE
+                      DISPUTES YOUR CLAIM, YOU WIN.
+                    </p>
+                  )}
+
                   <p className="font-body text-sm text-[#c4c4c4]">
                     {p.description}
                   </p>
@@ -376,6 +543,45 @@ export function LiveProjects() {
                     <span className="text-[#666]">Shipped means:</span>{" "}
                     {p.shipped_when}
                   </p>
+
+                  {(p.status === "pending_review" ||
+                    p.status === "flagged" ||
+                    p.status === "shipped") &&
+                    p.proof_url && (
+                      <p className="font-mono mt-2 text-[10px] text-[#888]">
+                        <span className="text-[#666]">Proof:</span>{" "}
+                        <a
+                          href={p.proof_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="break-all text-[#39FF14] underline decoration-[#2a4a2a] underline-offset-2 hover:text-[#FF6B00]"
+                        >
+                          {p.proof_url}
+                        </a>
+                      </p>
+                    )}
+
+                  {p.status === "shipped" && p.shipped_at && (
+                    <p className="font-mono mt-2 text-[10px] text-[#39FF14]">
+                      OFFICIALLY SHIPPED:{" "}
+                      {new Date(p.shipped_at).toLocaleString(undefined, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </p>
+                  )}
+
+                  {p.status === "abandoned" && (
+                    <p className="font-mono mt-3 text-[10px] uppercase tracking-wide text-[#888]">
+                      STAKE FORFEITED
+                    </p>
+                  )}
+
+                  {(p.status === "pending_review" || p.status === "flagged") && (
+                    <p className="font-mono mt-2 text-[10px] text-[#888]">
+                      FLAGS ON THIS CLAIM: {flags}
+                    </p>
+                  )}
 
                   <div className="mt-3 font-mono text-[10px] leading-relaxed text-[#39FF14]">
                     {topCommits.length === 0 ? (
@@ -396,14 +602,25 @@ export function LiveProjects() {
                   </div>
 
                   <dl className="mt-4 grid grid-cols-2 gap-2 font-mono text-[11px] md:grid-cols-3 md:text-xs">
-                    <div className="border border-[#2a2a2a] bg-[#080808] p-2">
-                      <dt className="text-[#666]">Days left</dt>
-                      <dd
-                        className={`text-lg font-semibold tabular-nums ${atRisk ? "text-[#FF6B00]" : "text-[#39FF14]"}`}
-                      >
-                        {dl}
-                      </dd>
-                    </div>
+                    {p.status === "pending_review" || p.status === "flagged" ? (
+                      <div className="border border-[#2a2a2a] bg-[#080808] p-2">
+                        <dt className="text-[#666]">Review</dt>
+                        <dd className="text-lg font-semibold tabular-nums text-[#FFAA00]">
+                          {reviewEnd != null
+                            ? formatReviewCountdownMs(reviewLeftMs)
+                            : "—"}
+                        </dd>
+                      </div>
+                    ) : (
+                      <div className="border border-[#2a2a2a] bg-[#080808] p-2">
+                        <dt className="text-[#666]">Days left</dt>
+                        <dd
+                          className={`text-lg font-semibold tabular-nums ${atRisk ? "text-[#FF6B00]" : "text-[#39FF14]"}`}
+                        >
+                          {p.status === "shipped" ? "—" : dl}
+                        </dd>
+                      </div>
+                    )}
                     <div className="border border-[#2a2a2a] bg-[#080808] p-2">
                       <dt className="text-[#666]">Stake</dt>
                       <dd className="text-lg font-semibold tabular-nums text-[#FF6B00]">
@@ -428,10 +645,48 @@ export function LiveProjects() {
                     <p className="font-mono mb-1 text-[10px] uppercase text-[#666]">
                       {Math.round(prog * 100)}% of window elapsed
                     </p>
-                    <ProgressBar value={prog} atRisk={atRisk} />
+                    <ProgressBar
+                      value={prog}
+                      atRisk={
+                        atRisk &&
+                        p.status !== "shipped" &&
+                        p.status !== "abandoned"
+                      }
+                      muted={p.status === "abandoned"}
+                    />
                   </div>
-                  {own && (
-                    <CheckinControl projectId={p.id} onDone={() => void load()} />
+
+                  {canClaimShip && (
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={() => setClaimModalId(p.id)}
+                        className="w-full border-2 border-[#39FF14] bg-[#0a0a0a] py-2 font-mono text-[10px] uppercase tracking-wide text-[#39FF14] hover:bg-[#0f1f0f]"
+                      >
+                        CLAIM SHIPPED
+                      </button>
+                    </div>
+                  )}
+
+                  {(p.status === "pending_review" || p.status === "flagged") &&
+                    !own && (
+                      <div className="mt-3">
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full border-2 border-[#553300] bg-[#0a0a0a] py-2 font-mono text-[9px] uppercase tracking-wide text-[#553300]"
+                          title="Coming in Part 2"
+                        >
+                          FLAG THIS SUBMISSION
+                        </button>
+                      </div>
+                    )}
+
+                  {canCheckIn && (
+                    <CheckinControl
+                      projectId={p.id}
+                      onDone={() => void load()}
+                    />
                   )}
                 </article>
               )

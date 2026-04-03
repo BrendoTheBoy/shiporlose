@@ -12,6 +12,25 @@ export function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString()
 }
 
+/** 48-hour community review window after proof submission */
+export const REVIEW_WINDOW_MS = 48 * 60 * 60 * 1000
+
+export function reviewWindowEndsAt(
+  reviewStartedAt: string | null | undefined,
+): number | null {
+  if (!reviewStartedAt) return null
+  return new Date(reviewStartedAt).getTime() + REVIEW_WINDOW_MS
+}
+
+export function formatReviewCountdownMs(remainingMs: number): string {
+  if (remainingMs <= 0) return "0h 0m 0s"
+  const s = Math.floor(remainingMs / 1000)
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  const sec = s % 60
+  return `${h}h ${m}m ${sec}s`
+}
+
 export function truncateText(s: string, max: number): string {
   const t = s.trim()
   if (t.length <= max) return t

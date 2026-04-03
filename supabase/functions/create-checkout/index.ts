@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       .from("projects")
       .select("*", { count: "exact", head: true })
       .eq("user_id", verifiedUserId)
-      .eq("status", "active")
+      .in("status", ["active", "pending_review", "flagged"])
 
     if (cntErr) throw cntErr
     if ((count ?? 0) > 0) {

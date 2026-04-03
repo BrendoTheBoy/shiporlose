@@ -62,7 +62,7 @@ export function DeclareForm() {
         .from("projects")
         .select("*", { count: "exact", head: true })
         .eq("user_id", user.id)
-        .eq("status", "active")
+        .in("status", ["active", "pending_review", "flagged"])
 
       if (cntErr) throw cntErr
       if ((count ?? 0) > 0) {
