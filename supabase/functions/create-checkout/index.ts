@@ -8,6 +8,16 @@ const corsHeaders: Record<string, string> = {
     "authorization, x-client-info, apikey, content-type",
 }
 
+/** Bearer token from Authorization only (ignore apikey header). */
+function bearerJwtFromRequest(req: Request): string | null {
+  const raw = req.headers.get("Authorization") ?? req.headers.get("authorization")
+  if (!raw) return null
+  const m = raw.match(/^Bearer\s+(.+)$/i)
+  const token = m?.[1]?.trim()
+  if (!token) return null
+  return token
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })
@@ -21,23 +31,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get("Authorization")
-    if (!authHeader?.startsWith("Bearer ")) {
+    const jwt = bearerJwtFromRequest(req)
+    if (!jwt) {
       return new Response(JSON.stringify({ error: "Missing authorization" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } },
-    )
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
+    }
 
-    const token = authHeader.replace("Bearer ", "")
-    const { data: userData, error: userErr } = await supabase.auth.getUser(token)
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(jwt)
     if (userErr || !userData.user) {
+      console.error("getUser failed:", userErr?.message ?? "no user")
       return new Response(JSON.stringify({ error: "Invalid session" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,6 +77,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
+
+    const verifiedUserId = userData.user.id
 
     if (
       !github_username ||
@@ -85,10 +105,10 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { count, error: cntErr } = await supabase
+    const { count, error: cntErr } = await supabaseAdmin
       .from("projects")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", user_id)
+      .eq("user_id", verifiedUserId)
       .eq("status", "active")
 
     if (cntErr) throw cntErr
@@ -126,7 +146,7 @@ Deno.serve(async (req) => {
         },
       ],
       metadata: {
-        user_id,
+        user_id: verifiedUserId,
         github_username,
         project_name,
         description,

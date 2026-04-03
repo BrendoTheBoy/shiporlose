@@ -72,6 +72,15 @@ export function DeclareForm() {
         return
       }
 
+      const { data: sessionData, error: sessionErr } =
+        await supabase.auth.getSession()
+      if (sessionErr) throw sessionErr
+      const accessToken = sessionData.session?.access_token
+      if (!accessToken) {
+        setError("Session expired. Sign in again.")
+        return
+      }
+
       const { data, error: fnErr } =
         await supabase.functions.invoke<CheckoutResponse>("create-checkout", {
           body: {
@@ -82,6 +91,9 @@ export function DeclareForm() {
             repo_full_name: repo.full_name,
             user_id: user.id,
             github_username: githubUsername,
+          },
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
           },
         })
 
