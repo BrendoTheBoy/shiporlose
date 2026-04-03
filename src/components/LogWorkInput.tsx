@@ -67,7 +67,7 @@ export function LogWorkInput({
             onClick={() => void submit()}
             className="shrink-0 border border-[#39FF14] bg-[#0a0a0a] px-2 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wide text-[#39FF14] hover:bg-[#0f1f0f] disabled:opacity-50"
           >
-            {saving ? "…" : "OK"}
+            {saving ? "…" : "SUBMIT"}
           </button>
         </div>
         <div className="mt-1 flex min-h-[14px] items-start justify-end gap-2">

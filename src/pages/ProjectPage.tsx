@@ -415,7 +415,7 @@ export function ProjectPage() {
       >
         {/* Header: avatar | username+title | status + claim */}
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#1a1a1a] pb-3">
-          <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-3">
             <img
               src={avatarUrl}
               alt=""
@@ -556,7 +556,7 @@ export function ProjectPage() {
         )}
 
         {own && (
-          <div className="mt-3 space-y-3 border-t border-[#2a2a2a] pt-3">
+          <div className="mt-3 space-y-3">
             {project.status === "pending_review" && (
               <p className="font-mono text-[9px] leading-relaxed text-[#888]">
                 YOUR SUBMISSION IS IN THE 48-HOUR COMMUNITY REVIEW WINDOW.
@@ -572,7 +572,7 @@ export function ProjectPage() {
           project.status === "pending_review" &&
           project.proof_url &&
           user && (
-            <div className="mt-3 border-t border-[#2a2a2a] pt-3">
+            <div className="mt-3">
               {iFlagged ? (
                 <button
                   type="button"
