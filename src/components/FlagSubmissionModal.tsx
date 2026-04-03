@@ -45,11 +45,12 @@ export function FlagSubmissionModal({
   }, [open, onClose, saving])
 
   useEffect(() => {
-    if (open) {
+    if (!open) return
+    queueMicrotask(() => {
       setReasonKey(REASON_PRESETS[0])
       setOtherText("")
       setErr(null)
-    }
+    })
   }, [open])
 
   if (!open) return null

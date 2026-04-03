@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 import { syncCommitsForProject } from "../lib/syncCommits"
+import {
+  cardFrameClass,
+  daysLeftUntil,
+  deadlinePassed,
+  isAtRisk,
+  progressElapsed,
+} from "../lib/projectDisplay"
 import {
   formatRelativeTime,
   formatReviewCountdownMs,
@@ -10,8 +18,7 @@ import {
 } from "../lib/time"
 import type { CommitRow, ProjectRow, ProjectStatus } from "../types/database"
 import { AsciiDivider } from "./AsciiDivider"
-import { ClaimShippedModal } from "./ClaimShippedModal"
-import { FlagSubmissionModal } from "./FlagSubmissionModal"
+import { ProgressBar } from "./ProgressBar"
 
 type ProjectWithCommits = ProjectRow & {
   commits: CommitRow[]
@@ -20,123 +27,6 @@ type ProjectWithCommits = ProjectRow & {
 /** Public feed columns — excludes payout fields so other users never receive them in the response. */
 const PROJECT_COLUMNS_PUBLIC =
   "id, user_id, github_username, project_name, description, shipped_when, repo_url, repo_full_name, stake_amount, stake_status, status, proof_url, stripe_session_id, payment_intent_id, created_at, deadline, review_started_at, shipped_at, abandoned_at"
-
-function isValidEmail(value: string): boolean {
-  const t = value.trim()
-  if (t.length < 3 || t.length > 254) return false
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)
-}
-
-function PayoutEmailSection({
-  project,
-  onSaved,
-}: {
-  project: ProjectRow
-  onSaved: () => void
-}) {
-  const [email, setEmail] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const [justSubmitted, setJustSubmitted] = useState(false)
-
-  const hasEmail = project.payout_email != null && project.payout_email.trim() !== ""
-
-  useEffect(() => {
-    if (!justSubmitted) return
-    const t = window.setTimeout(() => setJustSubmitted(false), 8000)
-    return () => window.clearTimeout(t)
-  }, [justSubmitted])
-
-  if (justSubmitted) {
-    return (
-      <div className="mt-4 border-4 border-[#39FF14] border-double bg-[#050805] p-3 shadow-[inset_0_0_0_1px_#1a3d1a]">
-        <p className="font-mono text-[10px] font-semibold uppercase leading-relaxed tracking-wide text-[#39FF14] sm:text-[11px]">
-          PAYOUT EMAIL SAVED. YOU&apos;LL RECEIVE YOUR WINNINGS WITHIN 48 HOURS.
-        </p>
-      </div>
-    )
-  }
-
-  if (hasEmail) {
-    if (project.payout_sent) {
-      return (
-        <div className="mt-4 border-4 border-[#1a3d1a] bg-[#050805] p-3">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-wide text-[#39FF14] sm:text-[11px]">
-            PAYOUT SENT ✓
-          </p>
-        </div>
-      )
-    }
-    return (
-      <div className="mt-4 border-4 border-[#2a5a2a] border-dashed bg-[#050805] p-3">
-        <p className="font-mono text-[10px] leading-relaxed text-[#39FF14] sm:text-[11px]">
-          PAYOUT PENDING — we&apos;ll send your winnings to{" "}
-          <span className="break-all text-[#7fff7f]">{project.payout_email}</span>{" "}
-          within 48 hours
-        </p>
-      </div>
-    )
-  }
-
-  const submit = async () => {
-    const trimmed = email.trim()
-    if (!isValidEmail(trimmed)) {
-      setErr("Enter a valid email address")
-      return
-    }
-    setSaving(true)
-    setErr(null)
-    const { error } = await supabase
-      .from("projects")
-      .update({ payout_email: trimmed })
-      .eq("id", project.id)
-    setSaving(false)
-    if (error) {
-      setErr(error.message)
-      return
-    }
-    setJustSubmitted(true)
-    onSaved()
-  }
-
-  return (
-    <div className="mt-4 space-y-3">
-      <div className="border-4 border-[#39FF14] border-double bg-[#020803] p-3 shadow-[4px_4px_0_#0a1f0a]">
-        <p className="font-mono text-[10px] font-bold uppercase leading-relaxed tracking-wide text-[#39FF14] sm:text-[11px]">
-          YOU SHIPPED! ENTER YOUR EMAIL TO RECEIVE YOUR PAYOUT
-        </p>
-      </div>
-      <div className="border-4 border-[#1a4a1a] bg-[#050805] p-3">
-        <label
-          htmlFor={`payout-email-${project.id}`}
-          className="font-mono text-[9px] font-semibold uppercase tracking-wide text-[#5ddf5d]"
-        >
-          PAYOUT EMAIL (for Interac e-transfer)
-        </label>
-        <input
-          id={`payout-email-${project.id}`}
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@email.com"
-          className="mt-2 w-full border-4 border-[#2a5a2a] bg-[#0a0a0a] px-3 py-2 font-mono text-[11px] text-[#39FF14] placeholder:text-[#2a4a2a] focus:border-[#39FF14] focus:outline-none"
-        />
-        <button
-          type="button"
-          disabled={saving || !email.trim()}
-          onClick={() => void submit()}
-          className="mt-3 w-full border-4 border-[#39FF14] bg-[#0a0a0a] py-2 font-mono text-[10px] font-bold uppercase tracking-wide text-[#39FF14] shadow-[3px_3px_0_#0a1f0a] hover:bg-[#0f1f0f] disabled:opacity-50"
-        >
-          {saving ? "…" : "SUBMIT PAYOUT EMAIL"}
-        </button>
-        {err && (
-          <p className="mt-2 font-mono text-[10px] text-red-400">{err}</p>
-        )}
-      </div>
-    </div>
-  )
-}
 
 const FEED_STATUSES: ProjectStatus[] = [
   "active",
@@ -184,210 +74,20 @@ const MOCK: {
   },
 ]
 
-function ProgressBar({
-  value,
-  atRisk,
-  muted,
-}: {
-  value: number
-  atRisk: boolean
-  muted?: boolean
-}) {
-  const pct = Math.round(value * 100)
-  return (
-    <div
-      className={`h-3 w-full border-2 ${
-        muted
-          ? "border-[#444]"
-          : atRisk
-            ? "border-[#FF6B00]"
-            : "border-[#2a4a2a]"
-      }`}
-      role="progressbar"
-      aria-valuenow={pct}
-      aria-valuemin={0}
-      aria-valuemax={100}
-    >
-      <div
-        className={`h-full transition-all ${
-          muted ? "bg-[#555]" : atRisk ? "bg-[#FF6B00]" : "bg-[#39FF14]"
-        }`}
-        style={{ width: `${pct}%` }}
-      />
-    </div>
-  )
-}
-
-function daysLeftUntil(deadlineIso: string): number {
-  const deadline = new Date(deadlineIso).getTime()
-  const now = Date.now()
-  return Math.max(0, Math.ceil((deadline - now) / 86400000))
-}
-
-function deadlinePassed(deadlineIso: string): boolean {
-  return new Date(deadlineIso).getTime() < Date.now()
-}
-
-function progressElapsed(project: ProjectRow): number {
-  const created = new Date(project.created_at).getTime()
-  const now = Date.now()
-  const elapsedDays = (now - created) / 86400000
-  return Math.min(1, Math.max(0, elapsedDays / 30))
-}
-
-function isAtRisk(project: ProjectRow, commits: CommitRow[]): boolean {
-  const now = Date.now()
-  const seven = 7 * 86400000
-  const sorted = [...commits].sort(
-    (a, b) =>
-      new Date(b.committed_at).getTime() -
-      new Date(a.committed_at).getTime(),
-  )
-  const last = sorted[0]
-  if (last) {
-    return now - new Date(last.committed_at).getTime() >= seven
-  }
-  return now - new Date(project.created_at).getTime() >= seven
-}
-
-function cardFrameClass(
-  status: ProjectStatus,
-  atRisk: boolean,
-  passed: boolean,
-): string {
-  if (status === "abandoned") {
-    return "border-[#3a3a3a] opacity-60"
-  }
-  if (status === "shipped") {
-    return "border-[#39FF14] shadow-[0_0_28px_rgba(57,255,20,0.14)]"
-  }
-  if (status === "flagged") {
-    return "border-[#aa3300] shadow-[inset_0_0_32px_rgba(80,0,0,0.2)]"
-  }
-  if (status === "pending_review") {
-    return "border-[#cc8800]"
-  }
-  if (passed && status === "active") {
-    return "border-red-800"
-  }
-  if (atRisk) {
-    return "border-[#FF6B00]"
-  }
-  return "border-[#2a2a2a]"
-}
-
-function CheckinControl({
-  projectId,
-  onDone,
-}: {
-  projectId: string
-  onDone: () => void
-}) {
-  const { user } = useAuth()
-  const [open, setOpen] = useState(false)
-  const [content, setContent] = useState("")
-  const [saving, setSaving] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-
-  if (!user) return null
-
-  const submit = async () => {
-    const t = content.trim()
-    if (!t) return
-    setSaving(true)
-    setErr(null)
-    const { error } = await supabase.from("checkins").insert({
-      project_id: projectId,
-      user_id: user.id,
-      content: t,
-    })
-    setSaving(false)
-    if (error) {
-      setErr(error.message)
-      return
-    }
-    setContent("")
-    setOpen(false)
-    onDone()
-  }
-
-  return (
-    <div className="mt-3 border-t border-[#2a2a2a] pt-2">
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="font-mono text-[10px] uppercase tracking-wide text-[#888] hover:text-[#39FF14]"
-        >
-          + LOG NON-CODE WORK
-        </button>
-      ) : (
-        <div className="space-y-2">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value.slice(0, 200))}
-            rows={3}
-            className="w-full border-2 border-[#1a3d1a] bg-[#0a0a0a] px-2 py-1 font-mono text-[11px] text-[#39FF14]"
-            placeholder="Ship log entry (max 200 chars)"
-          />
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={saving || !content.trim()}
-              onClick={() => void submit()}
-              className="border border-[#39FF14] bg-[#0a0a0a] px-2 py-1 font-mono text-[10px] uppercase text-[#39FF14] disabled:opacity-50"
-            >
-              {saving ? "…" : "LOG IT"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false)
-                setContent("")
-                setErr(null)
-              }}
-              className="font-mono text-[10px] uppercase text-[#666]"
-            >
-              cancel
-            </button>
-          </div>
-          {err && (
-            <p className="font-mono text-[10px] text-red-400">{err}</p>
-          )}
-          <p className="font-mono text-[10px] text-[#555]">
-            {content.length}/200
-          </p>
-        </div>
-      )}
-    </div>
-  )
-}
-
 export function LiveProjects() {
   const { user, githubAccessToken } = useAuth()
+  const navigate = useNavigate()
   const [rows, setRows] = useState<ProjectWithCommits[]>([])
   const [flagCounts, setFlagCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [fetchErr, setFetchErr] = useState<string | null>(null)
   const syncedRef = useRef<Set<string>>(new Set())
-  const [claimModalId, setClaimModalId] = useState<string | null>(null)
-  const [flagModalId, setFlagModalId] = useState<string | null>(null)
-  const [myFlaggedProjectIds, setMyFlaggedProjectIds] = useState<Set<string>>(
-    () => new Set(),
-  )
-  const [proofSuccessId, setProofSuccessId] = useState<string | null>(null)
   const [, setTick] = useState(0)
 
   useEffect(() => {
     const id = window.setInterval(() => setTick((t) => t + 1), 1000)
     return () => window.clearInterval(id)
   }, [])
-
-  useEffect(() => {
-    if (!proofSuccessId) return
-    const t = window.setTimeout(() => setProofSuccessId(null), 12000)
-    return () => window.clearTimeout(t)
-  }, [proofSuccessId])
 
   const load = useCallback(async () => {
     setFetchErr(null)
@@ -403,7 +103,6 @@ export function LiveProjects() {
       setFetchErr(pErr.message)
       setRows([])
       setFlagCounts({})
-      setMyFlaggedProjectIds(new Set())
       setLoading(false)
       return
     }
@@ -412,42 +111,8 @@ export function LiveProjects() {
     if (ids.length === 0) {
       setRows([])
       setFlagCounts({})
-      setMyFlaggedProjectIds(new Set())
       setLoading(false)
       return
-    }
-
-    const payoutById = new Map<
-      string,
-      Pick<ProjectRow, "payout_email" | "payout_sent" | "payout_amount">
-    >()
-    if (user?.id) {
-      const { data: payoutRows, error: payErr } = await supabase
-        .from("projects")
-        .select("id, payout_email, payout_sent, payout_amount")
-        .eq("user_id", user.id)
-        .in("id", ids)
-      if (payErr) {
-        setFetchErr(payErr.message)
-        setRows([])
-        setFlagCounts({})
-        setMyFlaggedProjectIds(new Set())
-        setLoading(false)
-        return
-      }
-      for (const r of payoutRows ?? []) {
-        const row = r as {
-          id: string
-          payout_email: string | null
-          payout_sent: boolean
-          payout_amount: number | null
-        }
-        payoutById.set(row.id, {
-          payout_email: row.payout_email,
-          payout_sent: row.payout_sent,
-          payout_amount: row.payout_amount,
-        })
-      }
     }
 
     const plist: ProjectRow[] = (projects ?? []).map((p) => {
@@ -455,12 +120,11 @@ export function LiveProjects() {
         ProjectRow,
         "payout_email" | "payout_sent" | "payout_amount"
       >
-      const pay = payoutById.get(base.id)
       return {
         ...base,
-        payout_email: pay?.payout_email ?? null,
-        payout_sent: pay?.payout_sent ?? false,
-        payout_amount: pay?.payout_amount ?? null,
+        payout_email: null,
+        payout_sent: false,
+        payout_amount: null,
       }
     })
 
@@ -473,7 +137,6 @@ export function LiveProjects() {
       setFetchErr(cErr.message)
       setRows([])
       setFlagCounts({})
-      setMyFlaggedProjectIds(new Set())
       setLoading(false)
       return
     }
@@ -487,7 +150,6 @@ export function LiveProjects() {
       setFetchErr(fErr.message)
       setRows([])
       setFlagCounts({})
-      setMyFlaggedProjectIds(new Set())
       setLoading(false)
       return
     }
@@ -498,27 +160,6 @@ export function LiveProjects() {
       counts[pid] = (counts[pid] ?? 0) + 1
     }
     setFlagCounts(counts)
-
-    if (user?.id) {
-      const { data: mine, error: mErr } = await supabase
-        .from("flags")
-        .select("project_id")
-        .eq("user_id", user.id)
-        .in("project_id", ids)
-      if (mErr) {
-        setFetchErr(mErr.message)
-        setRows([])
-        setFlagCounts({})
-        setMyFlaggedProjectIds(new Set())
-        setLoading(false)
-        return
-      }
-      setMyFlaggedProjectIds(
-        new Set((mine ?? []).map((r) => r.project_id as string)),
-      )
-    } else {
-      setMyFlaggedProjectIds(new Set())
-    }
 
     const byProject = new Map<string, CommitRow[]>()
     for (const id of ids) byProject.set(id, [])
@@ -539,7 +180,7 @@ export function LiveProjects() {
 
     setRows(merged)
     setLoading(false)
-  }, [user?.id])
+  }, [])
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -600,36 +241,17 @@ export function LiveProjects() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, githubAccessToken, projectIdsKey, load])
 
-  const showMock = !loading && rows.length === 0 && !fetchErr
+  const displayRows = useMemo(() => {
+    if (!user?.id) return rows
+    const mine = rows.filter((r) => r.user_id === user.id)
+    const others = rows.filter((r) => r.user_id !== user.id)
+    return [...mine, ...others]
+  }, [rows, user?.id])
 
-  const claimProject = rows.find((r) => r.id === claimModalId)
-  const flagProject = rows.find((r) => r.id === flagModalId)
+  const showMock = !loading && rows.length === 0 && !fetchErr
 
   return (
     <section className="border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20">
-      {claimProject && (
-        <ClaimShippedModal
-          open={!!claimModalId}
-          projectId={claimProject.id}
-          shippedWhen={claimProject.shipped_when}
-          onClose={() => setClaimModalId(null)}
-          onSuccess={() => {
-            setProofSuccessId(claimProject.id)
-            void load()
-          }}
-        />
-      )}
-      {flagProject && flagProject.proof_url && (
-        <FlagSubmissionModal
-          open={!!flagModalId}
-          projectId={flagProject.id}
-          projectName={flagProject.project_name}
-          shippedWhen={flagProject.shipped_when}
-          proofUrl={flagProject.proof_url}
-          onClose={() => setFlagModalId(null)}
-          onSuccess={() => void load()}
-        />
-      )}
       <AsciiDivider label="LIVE PROJECTS — PUBLIC FEED" />
       <div className="mx-auto mt-10 max-w-5xl">
         <h2 className="font-display mb-10 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
@@ -649,7 +271,7 @@ export function LiveProjects() {
 
         <div className="grid gap-5 md:grid-cols-2">
           {!loading &&
-            rows.map((p) => {
+            displayRows.map((p) => {
               const atRisk = isAtRisk(p, p.commits)
               const topCommits = p.commits.slice(0, 3)
               const totalCommits = p.commits.length
@@ -668,287 +290,212 @@ export function LiveProjects() {
                 reviewEnd != null ? reviewEnd - Date.now() : 0
               const showThreeDayPulse =
                 p.status === "active" && !passed && dl > 0 && dl <= 3
-              const canClaimShip =
-                own && p.status === "active" && !passed
               const showDeadlinePassed = own && p.status === "active" && passed
-              const canCheckIn = own && p.status === "active" && !passed
 
               return (
-                <article
-                  key={p.id}
-                  className={`card-lift flex flex-col border-2 bg-[#0d0d0d] p-5 shadow-[4px_4px_0_#111] ${frame}`}
-                >
-                  <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                      <img
-                        src={avatarUrl}
-                        alt=""
-                        className="h-8 w-8 shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] object-cover"
-                        width={32}
-                        height={32}
-                      />
-                      <h3 className="font-display min-w-0 text-[10px] text-[#39FF14] sm:text-[11px]">
-                        {p.project_name}
-                      </h3>
-                    </div>
-                    <div className="flex flex-wrap items-center justify-end gap-2">
-                      {p.status === "pending_review" && (
-                        <span className="font-mono text-[10px] uppercase tracking-wide border border-[#cc8800] bg-[#1a1200] px-2 py-0.5 text-[#FFAA00]">
-                          UNDER REVIEW
-                        </span>
-                      )}
-                      {p.status === "shipped" && (
-                        <span className="font-mono text-[10px] uppercase tracking-wide border border-[#2a6a2a] bg-[#081008] px-2 py-0.5 text-[#39FF14]">
-                          SHIPPED ✓
-                        </span>
-                      )}
-                      {p.status === "abandoned" && (
-                        <span className="font-mono text-[10px] uppercase tracking-wide border border-red-900 bg-[#180808] px-2 py-0.5 text-red-400">
-                          ABANDONED
-                        </span>
-                      )}
-                      {p.status === "flagged" && (
-                        <span className="font-mono text-[10px] uppercase tracking-wide border border-[#992200] bg-[#1a0800] px-2 py-0.5 text-[#ff5555]">
-                          UNDER INVESTIGATION
-                        </span>
-                      )}
-                      <span className="font-mono text-[10px] uppercase tabular-nums text-[#39FF14] border border-[#2a4a2a] bg-[#080808] px-2 py-0.5">
-                        commits: {totalCommits}
-                      </span>
-                      {atRisk &&
-                        (p.status === "active" ||
-                          p.status === "pending_review" ||
-                          p.status === "flagged") && (
-                          <span className="font-mono text-[10px] uppercase tracking-wide text-[#FF6B00]">
-                            ⚠ AT RISK
+                <div key={p.id} className="relative">
+                  {own && (
+                    <p className="font-mono mb-1 text-[8px] font-bold uppercase tracking-widest text-[#39FF14]">
+                      YOUR PROJECT
+                    </p>
+                  )}
+                  <article
+                    role="link"
+                    tabIndex={0}
+                    onClick={() => navigate(`/project/${p.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault()
+                        navigate(`/project/${p.id}`)
+                      }
+                    }}
+                    className={`group card-lift relative flex cursor-pointer flex-col border-2 bg-[#0d0d0d] p-5 pb-12 shadow-[4px_4px_0_#111] outline-none focus-visible:ring-2 focus-visible:ring-[#39FF14] ${frame}`}
+                  >
+                    <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <img
+                          src={avatarUrl}
+                          alt=""
+                          className="h-8 w-8 shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] object-cover"
+                          width={32}
+                          height={32}
+                        />
+                        <div className="min-w-0">
+                          <h3 className="font-display min-w-0 text-[10px] text-[#39FF14] sm:text-[11px]">
+                            {p.project_name}
+                          </h3>
+                          <p className="font-mono truncate text-[9px] text-[#666]">
+                            @{p.github_username}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        {p.status === "pending_review" && (
+                          <span className="font-mono text-[10px] uppercase tracking-wide border border-[#cc8800] bg-[#1a1200] px-2 py-0.5 text-[#FFAA00]">
+                            UNDER REVIEW
                           </span>
                         )}
+                        {p.status === "shipped" && (
+                          <span className="font-mono text-[10px] uppercase tracking-wide border border-[#2a6a2a] bg-[#081008] px-2 py-0.5 text-[#39FF14]">
+                            SHIPPED ✓
+                          </span>
+                        )}
+                        {p.status === "abandoned" && (
+                          <span className="font-mono text-[10px] uppercase tracking-wide border border-red-900 bg-[#180808] px-2 py-0.5 text-red-400">
+                            ABANDONED
+                          </span>
+                        )}
+                        {p.status === "flagged" && (
+                          <span className="font-mono text-[10px] uppercase tracking-wide border border-[#992200] bg-[#1a0800] px-2 py-0.5 text-[#ff5555]">
+                            UNDER INVESTIGATION
+                          </span>
+                        )}
+                        {p.status === "active" && (
+                          <span className="font-mono text-[10px] uppercase tracking-wide border border-[#2a4a2a] bg-[#080808] px-2 py-0.5 text-[#39FF14]">
+                            ACTIVE
+                          </span>
+                        )}
+                        <span className="font-mono text-[10px] uppercase tabular-nums text-[#39FF14] border border-[#2a4a2a] bg-[#080808] px-2 py-0.5">
+                          commits: {totalCommits}
+                        </span>
+                        {atRisk &&
+                          (p.status === "active" ||
+                            p.status === "pending_review" ||
+                            p.status === "flagged") && (
+                            <span className="font-mono text-[10px] uppercase tracking-wide text-[#FF6B00]">
+                              ⚠ AT RISK
+                            </span>
+                          )}
+                      </div>
                     </div>
-                  </div>
 
-                  {showThreeDayPulse && (
-                    <p className="font-mono mb-2 animate-pulse text-[10px] uppercase tracking-wide text-[#FF6B00]">
-                      ⚠ 3 DAYS LEFT — SHIP OR LOSE
-                    </p>
-                  )}
-
-                  {showDeadlinePassed && (
-                    <p className="font-mono mb-2 text-[10px] uppercase tracking-wide text-red-500">
-                      DEADLINE PASSED
-                    </p>
-                  )}
-
-                  {proofSuccessId === p.id && (
-                    <p className="font-mono mb-3 border-2 border-[#39FF14] bg-[#081008] p-2 text-[10px] leading-relaxed text-[#39FF14]">
-                      PROOF SUBMITTED. 48-HOUR REVIEW WINDOW IS NOW OPEN. IF NO ONE
-                      DISPUTES YOUR CLAIM, YOU WIN.
-                    </p>
-                  )}
-
-                  {own && p.status === "shipped" && (
-                    <PayoutEmailSection
-                      key={p.id}
-                      project={p}
-                      onSaved={() => void load()}
-                    />
-                  )}
-
-                  <p className="font-body text-sm text-[#c4c4c4]">
-                    {p.description}
-                  </p>
-                  <p className="font-body mt-2 border-l-2 border-[#FF6B00] pl-2 text-xs text-[#888]">
-                    <span className="text-[#666]">Shipped means:</span>{" "}
-                    {p.shipped_when}
-                  </p>
-
-                  {(p.status === "pending_review" ||
-                    p.status === "flagged" ||
-                    p.status === "shipped") &&
-                    p.proof_url && (
-                      <p className="font-mono mt-2 text-[10px] text-[#888]">
-                        <span className="text-[#666]">Proof:</span>{" "}
-                        <a
-                          href={p.proof_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="break-all text-[#39FF14] underline decoration-[#2a4a2a] underline-offset-2 hover:text-[#FF6B00]"
-                        >
-                          {p.proof_url}
-                        </a>
+                    {showThreeDayPulse && (
+                      <p className="font-mono mb-2 animate-pulse text-[10px] uppercase tracking-wide text-[#FF6B00]">
+                        ⚠ 3 DAYS LEFT — SHIP OR LOSE
                       </p>
                     )}
 
-                  {p.status === "shipped" && p.shipped_at && (
-                    <p className="font-mono mt-2 text-[10px] text-[#39FF14]">
-                      SHIPPED AT:{" "}
-                      {new Date(p.shipped_at).toLocaleString(undefined, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </p>
-                  )}
-
-                  {p.status === "abandoned" && (
-                    <p className="font-mono mt-3 text-[10px] uppercase tracking-wide text-[#666]">
-                      {p.abandoned_at
-                        ? `ABANDONED: ${new Date(p.abandoned_at).toLocaleString(undefined, {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}`
-                        : "DEADLINE PASSED"}
-                    </p>
-                  )}
-
-                  {p.status === "flagged" && (
-                    <p className="font-mono mt-2 text-[10px] leading-relaxed text-[#888]">
-                      This submission is being reviewed by the ShipOrLose team.
-                    </p>
-                  )}
-
-                  {(p.status === "pending_review" || p.status === "flagged") && (
-                    <p className="font-mono mt-2 text-[10px] text-[#888]">
-                      FLAGS: {flags}
-                    </p>
-                  )}
-
-                  <div className="mt-3 font-mono text-[10px] leading-relaxed text-[#39FF14]">
-                    {topCommits.length === 0 ? (
-                      <p className="text-[#666]">&gt; (no commits synced yet)</p>
-                    ) : (
-                      topCommits.map((c) => (
-                        <p key={c.id} className="truncate">
-                          &gt; {c.sha.slice(0, 7)}{" "}
-                          <span className="text-[#c4c4c4]">
-                            &quot;{truncateText(c.message, 60)}&quot;
-                          </span>{" "}
-                          <span className="text-[#666]">
-                            — {formatRelativeTime(c.committed_at)}
-                          </span>
-                        </p>
-                      ))
+                    {showDeadlinePassed && (
+                      <p className="font-mono mb-2 text-[10px] uppercase tracking-wide text-red-500">
+                        DEADLINE PASSED
+                      </p>
                     )}
-                  </div>
 
-                  <dl className="mt-4 grid grid-cols-2 gap-2 font-mono text-[11px] md:grid-cols-3 md:text-xs">
-                    {p.status === "pending_review" ? (
+                    <p className="font-body text-sm text-[#c4c4c4]">
+                      {p.description}
+                    </p>
+                    <p className="font-body mt-2 border-l-2 border-[#FF6B00] pl-2 text-xs text-[#888]">
+                      <span className="text-[#666]">Shipped means:</span>{" "}
+                      {p.shipped_when}
+                    </p>
+
+                    {(p.status === "pending_review" || p.status === "flagged") && (
+                      <p className="font-mono mt-2 text-[10px] text-[#888]">
+                        FLAGS: {flags}
+                      </p>
+                    )}
+
+                    <div className="mt-3 font-mono text-[10px] leading-relaxed text-[#39FF14]">
+                      {topCommits.length === 0 ? (
+                        <p className="text-[#666]">&gt; (no commits synced yet)</p>
+                      ) : (
+                        topCommits.map((c) => (
+                          <p key={c.id} className="truncate">
+                            &gt; {c.sha.slice(0, 7)}{" "}
+                            <span className="text-[#c4c4c4]">
+                              &quot;{truncateText(c.message, 60)}&quot;
+                            </span>{" "}
+                            <span className="text-[#666]">
+                              — {formatRelativeTime(c.committed_at)}
+                            </span>
+                          </p>
+                        ))
+                      )}
+                    </div>
+
+                    <dl className="mt-4 grid grid-cols-2 gap-2 font-mono text-[11px] md:grid-cols-3 md:text-xs">
+                      {p.status === "pending_review" ? (
+                        <div className="border border-[#2a2a2a] bg-[#080808] p-2">
+                          <dt className="text-[#666]">Review</dt>
+                          <dd className="text-lg font-semibold tabular-nums text-[#FFAA00]">
+                            {reviewEnd != null
+                              ? formatReviewCountdownMs(reviewLeftMs)
+                              : "—"}
+                          </dd>
+                        </div>
+                      ) : p.status === "flagged" ? (
+                        <div className="border border-[#2a2a2a] bg-[#080808] p-2">
+                          <dt className="text-[#666]">Review</dt>
+                          <dd className="text-lg font-semibold tabular-nums text-[#888]">
+                            —
+                          </dd>
+                        </div>
+                      ) : (
+                        <div className="border border-[#2a2a2a] bg-[#080808] p-2">
+                          <dt className="text-[#666]">Days left</dt>
+                          <dd
+                            className={`text-lg font-semibold tabular-nums ${atRisk ? "text-[#FF6B00]" : "text-[#39FF14]"}`}
+                          >
+                            {p.status === "shipped" || p.status === "abandoned"
+                              ? "—"
+                              : dl}
+                          </dd>
+                        </div>
+                      )}
                       <div className="border border-[#2a2a2a] bg-[#080808] p-2">
-                        <dt className="text-[#666]">Review</dt>
-                        <dd className="text-lg font-semibold tabular-nums text-[#FFAA00]">
-                          {reviewEnd != null
-                            ? formatReviewCountdownMs(reviewLeftMs)
-                            : "—"}
-                        </dd>
-                      </div>
-                    ) : p.status === "flagged" ? (
-                      <div className="border border-[#2a2a2a] bg-[#080808] p-2">
-                        <dt className="text-[#666]">Review</dt>
-                        <dd className="text-lg font-semibold tabular-nums text-[#888]">
-                          —
-                        </dd>
-                      </div>
-                    ) : (
-                      <div className="border border-[#2a2a2a] bg-[#080808] p-2">
-                        <dt className="text-[#666]">Days left</dt>
+                        <dt className="text-[#666]">Stake</dt>
                         <dd
-                          className={`text-lg font-semibold tabular-nums ${atRisk ? "text-[#FF6B00]" : "text-[#39FF14]"}`}
+                          className={`text-lg font-semibold tabular-nums ${
+                            p.status === "shipped"
+                              ? "text-[#39FF14]"
+                              : p.status === "abandoned"
+                                ? "text-red-400"
+                                : "text-[#FF6B00]"
+                          }`}
                         >
-                          {p.status === "shipped" || p.status === "abandoned"
-                            ? "—"
-                            : dl}
+                          {p.status === "shipped"
+                            ? "RETURNED"
+                            : p.status === "abandoned"
+                              ? "FORFEITED"
+                              : `$${p.stake_amount}`}
                         </dd>
                       </div>
-                    )}
-                    <div className="border border-[#2a2a2a] bg-[#080808] p-2">
-                      <dt className="text-[#666]">Stake</dt>
-                      <dd
-                        className={`text-lg font-semibold tabular-nums ${
-                          p.status === "shipped"
-                            ? "text-[#39FF14]"
-                            : p.status === "abandoned"
-                              ? "text-red-400"
-                              : "text-[#FF6B00]"
-                        }`}
-                      >
-                        {p.status === "shipped"
-                          ? "RETURNED"
-                          : p.status === "abandoned"
-                            ? "FORFEITED"
-                            : `$${p.stake_amount}`}
-                      </dd>
-                    </div>
-                    <div className="col-span-2 border border-[#2a2a2a] bg-[#080808] p-2 md:col-span-1">
-                      <dt className="text-[#666]">Repo</dt>
-                      <dd className="truncate text-[10px] text-[#39FF14]">
-                        <a
-                          href={p.repo_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="underline decoration-[#2a4a2a] underline-offset-2 hover:text-[#FF6B00]"
-                        >
-                          {p.repo_full_name}
-                        </a>
-                      </dd>
-                    </div>
-                  </dl>
-                  <div className="mt-auto pt-4">
-                    <p className="font-mono mb-1 text-[10px] uppercase text-[#666]">
-                      {Math.round(prog * 100)}% of window elapsed
-                    </p>
-                    <ProgressBar
-                      value={prog}
-                      atRisk={
-                        atRisk &&
-                        p.status !== "shipped" &&
-                        p.status !== "abandoned"
-                      }
-                      muted={p.status === "abandoned"}
-                    />
-                  </div>
-
-                  {canClaimShip && (
-                    <div className="mt-4">
-                      <button
-                        type="button"
-                        onClick={() => setClaimModalId(p.id)}
-                        className="w-full border-2 border-[#39FF14] bg-[#0a0a0a] py-2 font-mono text-[10px] uppercase tracking-wide text-[#39FF14] hover:bg-[#0f1f0f]"
-                      >
-                        CLAIM SHIPPED
-                      </button>
-                    </div>
-                  )}
-
-                  {p.status === "pending_review" &&
-                    !own &&
-                    user &&
-                    p.proof_url && (
-                      <div className="mt-3">
-                        {myFlaggedProjectIds.has(p.id) ? (
-                          <button
-                            type="button"
-                            disabled
-                            className="w-full border-2 border-[#2a4a2a] bg-[#0a0a0a] py-2 font-mono text-[9px] uppercase tracking-wide text-[#39FF14] opacity-80"
+                      <div className="col-span-2 border border-[#2a2a2a] bg-[#080808] p-2 md:col-span-1">
+                        <dt className="text-[#666]">Repo</dt>
+                        <dd className="truncate text-[10px] text-[#39FF14]">
+                          <a
+                            href={p.repo_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                            className="underline decoration-[#2a4a2a] underline-offset-2 hover:text-[#FF6B00]"
                           >
-                            FLAGGED ✓
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setFlagModalId(p.id)}
-                            className="w-full border-2 border-[#cc8800] bg-[#0a0a0a] py-2 font-mono text-[9px] uppercase tracking-wide text-[#FFAA00] hover:bg-[#1a1200]"
-                          >
-                            FLAG THIS SUBMISSION
-                          </button>
-                        )}
+                            {p.repo_full_name}
+                          </a>
+                        </dd>
                       </div>
-                    )}
+                    </dl>
+                    <div className="mt-auto pt-4">
+                      <p className="font-mono mb-1 text-[10px] uppercase text-[#666]">
+                        {Math.round(prog * 100)}% of window elapsed
+                      </p>
+                      <ProgressBar
+                        value={prog}
+                        atRisk={
+                          atRisk &&
+                          p.status !== "shipped" &&
+                          p.status !== "abandoned"
+                        }
+                        muted={p.status === "abandoned"}
+                      />
+                    </div>
 
-                  {canCheckIn && (
-                    <CheckinControl
-                      projectId={p.id}
-                      onDone={() => void load()}
-                    />
-                  )}
-                </article>
+                    <div className="pointer-events-none absolute bottom-3 right-4 font-mono text-[9px] font-bold uppercase tracking-wide text-[#39FF14] opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      VIEW PROJECT →
+                    </div>
+                  </article>
+                </div>
               )
             })}
 

@@ -41,10 +41,11 @@ export function ClaimShippedModal({
   }, [open, onClose, saving])
 
   useEffect(() => {
-    if (open) {
+    if (!open) return
+    queueMicrotask(() => {
       setProofUrl("")
       setErr(null)
-    }
+    })
   }, [open])
 
   if (!open) return null

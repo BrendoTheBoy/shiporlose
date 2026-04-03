@@ -79,6 +79,14 @@ export type CheckinInsert = {
   content: string
 }
 
+export type CheckinRow = {
+  id: string
+  project_id: string
+  user_id: string
+  content: string
+  created_at: string
+}
+
 export type FlagRow = {
   id: string
   project_id: string
