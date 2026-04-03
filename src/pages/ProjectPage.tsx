@@ -30,15 +30,68 @@ function activityTime(iso: string): number {
   return new Date(iso).getTime()
 }
 
+/** Survives remounts so back-navigation can show data immediately while refetching. */
+type ProjectPageCacheEntry = {
+  project: ProjectRow
+  commits: CommitRow[]
+  checkins: CheckinRow[]
+  flagCount: number
+  iFlagged: boolean
+}
+
+const projectPageCache = new Map<string, ProjectPageCacheEntry>()
+
+function bootFromCache(routeId: string | undefined) {
+  if (!routeId) {
+    return {
+      project: null as ProjectRow | null,
+      commits: [] as CommitRow[],
+      checkins: [] as CheckinRow[],
+      flagCount: 0,
+      iFlagged: false,
+      loading: true,
+    }
+  }
+  const e = projectPageCache.get(routeId)
+  if (!e) {
+    return {
+      project: null as ProjectRow | null,
+      commits: [] as CommitRow[],
+      checkins: [] as CheckinRow[],
+      flagCount: 0,
+      iFlagged: false,
+      loading: true,
+    }
+  }
+  return {
+    project: e.project,
+    commits: e.commits,
+    checkins: e.checkins,
+    flagCount: e.flagCount,
+    iFlagged: e.iFlagged,
+    loading: false,
+  }
+}
+
 export function ProjectPage() {
   const { id: routeId } = useParams<{ id: string }>()
   const { user, githubAccessToken } = useAuth()
-  const [project, setProject] = useState<ProjectRow | null>(null)
-  const [commits, setCommits] = useState<CommitRow[]>([])
-  const [checkins, setCheckins] = useState<CheckinRow[]>([])
-  const [flagCount, setFlagCount] = useState(0)
-  const [iFlagged, setIFlagged] = useState(false)
-  const [loading, setLoading] = useState(true)
+  const [project, setProject] = useState<ProjectRow | null>(
+    () => bootFromCache(routeId).project,
+  )
+  const [commits, setCommits] = useState<CommitRow[]>(
+    () => bootFromCache(routeId).commits,
+  )
+  const [checkins, setCheckins] = useState<CheckinRow[]>(
+    () => bootFromCache(routeId).checkins,
+  )
+  const [flagCount, setFlagCount] = useState(
+    () => bootFromCache(routeId).flagCount,
+  )
+  const [iFlagged, setIFlagged] = useState(
+    () => bootFromCache(routeId).iFlagged,
+  )
+  const [loading, setLoading] = useState(() => bootFromCache(routeId).loading)
   const [fetchErr, setFetchErr] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [claimOpen, setClaimOpen] = useState(false)
@@ -52,131 +105,165 @@ export function ProjectPage() {
     return () => window.clearInterval(t)
   }, [])
 
-  const load = useCallback(async () => {
-    if (!routeId) {
-      setNotFound(true)
-      setLoading(false)
-      return
-    }
-    setFetchErr(null)
-    setLoading(true)
-    setNotFound(false)
+  const load = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent ?? false
+      if (!routeId) {
+        setNotFound(true)
+        setLoading(false)
+        return
+      }
+      setFetchErr(null)
+      if (!silent) {
+        setLoading(true)
+      }
+      setNotFound(false)
 
-    const { data: proj, error: pErr } = await supabase
-      .from("projects")
-      .select(PROJECT_COLUMNS_PUBLIC)
-      .eq("id", routeId)
-      .maybeSingle()
-
-    if (pErr) {
-      setFetchErr(pErr.message)
-      setProject(null)
-      setLoading(false)
-      return
-    }
-    if (!proj) {
-      setNotFound(true)
-      setProject(null)
-      setLoading(false)
-      return
-    }
-
-    const base = proj as Omit<
-      ProjectRow,
-      "payout_email" | "payout_sent" | "payout_amount"
-    >
-    let merged: ProjectRow = {
-      ...base,
-      payout_email: null,
-      payout_sent: false,
-      payout_amount: null,
-    }
-
-    if (user?.id === base.user_id) {
-      const { data: payRow, error: payErr } = await supabase
+      const { data: proj, error: pErr } = await supabase
         .from("projects")
-        .select("payout_email, payout_sent, payout_amount")
+        .select(PROJECT_COLUMNS_PUBLIC)
         .eq("id", routeId)
         .maybeSingle()
-      if (!payErr && payRow) {
-        const p = payRow as {
-          payout_email: string | null
-          payout_sent: boolean
-          payout_amount: number | null
+
+      if (pErr) {
+        if (!silent) {
+          setFetchErr(pErr.message)
+          setProject(null)
+        } else {
+          console.error(pErr)
         }
-        merged = {
-          ...merged,
-          payout_email: p.payout_email,
-          payout_sent: p.payout_sent,
-          payout_amount: p.payout_amount,
+        setLoading(false)
+        return
+      }
+      if (!proj) {
+        setNotFound(true)
+        setProject(null)
+        setLoading(false)
+        return
+      }
+
+      const base = proj as Omit<
+        ProjectRow,
+        "payout_email" | "payout_sent" | "payout_amount"
+      >
+      let merged: ProjectRow = {
+        ...base,
+        payout_email: null,
+        payout_sent: false,
+        payout_amount: null,
+      }
+
+      if (user?.id === base.user_id) {
+        const { data: payRow, error: payErr } = await supabase
+          .from("projects")
+          .select("payout_email, payout_sent, payout_amount")
+          .eq("id", routeId)
+          .maybeSingle()
+        if (!payErr && payRow) {
+          const p = payRow as {
+            payout_email: string | null
+            payout_sent: boolean
+            payout_amount: number | null
+          }
+          merged = {
+            ...merged,
+            payout_email: p.payout_email,
+            payout_sent: p.payout_sent,
+            payout_amount: p.payout_amount,
+          }
         }
       }
-    }
 
-    const { data: commitRows, error: cErr } = await supabase
-      .from("commits")
-      .select("*")
-      .eq("project_id", routeId)
-      .order("committed_at", { ascending: false })
-
-    if (cErr) {
-      setFetchErr(cErr.message)
-      setLoading(false)
-      return
-    }
-
-    const { data: checkinRows, error: chErr } = await supabase
-      .from("checkins")
-      .select("*")
-      .eq("project_id", routeId)
-      .order("created_at", { ascending: false })
-
-    if (chErr) {
-      setFetchErr(chErr.message)
-      setLoading(false)
-      return
-    }
-
-    const { count: fc, error: fErr } = await supabase
-      .from("flags")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", routeId)
-
-    if (fErr) {
-      setFetchErr(fErr.message)
-      setLoading(false)
-      return
-    }
-
-    setFlagCount(fc ?? 0)
-
-    if (user?.id) {
-      const { data: mine, error: mErr } = await supabase
-        .from("flags")
-        .select("id")
+      const { data: commitRows, error: cErr } = await supabase
+        .from("commits")
+        .select("*")
         .eq("project_id", routeId)
-        .eq("user_id", user.id)
-        .maybeSingle()
-      if (!mErr) {
-        setIFlagged(!!mine)
-      }
-    } else {
-      setIFlagged(false)
-    }
+        .order("committed_at", { ascending: false })
 
-    setProject(merged)
-    setCommits((commitRows ?? []) as CommitRow[])
-    setCheckins((checkinRows ?? []) as CheckinRow[])
-    setLoading(false)
-  }, [routeId, user])
+      if (cErr) {
+        if (!silent) {
+          setFetchErr(cErr.message)
+        } else {
+          console.error(cErr)
+        }
+        setLoading(false)
+        return
+      }
+
+      const { data: checkinRows, error: chErr } = await supabase
+        .from("checkins")
+        .select("*")
+        .eq("project_id", routeId)
+        .order("created_at", { ascending: false })
+
+      if (chErr) {
+        if (!silent) {
+          setFetchErr(chErr.message)
+        } else {
+          console.error(chErr)
+        }
+        setLoading(false)
+        return
+      }
+
+      const { count: fc, error: fErr } = await supabase
+        .from("flags")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", routeId)
+
+      if (fErr) {
+        if (!silent) {
+          setFetchErr(fErr.message)
+        } else {
+          console.error(fErr)
+        }
+        setLoading(false)
+        return
+      }
+
+      const fcVal = fc ?? 0
+      let nextIFlagged = false
+      if (user?.id) {
+        const { data: mine, error: mErr } = await supabase
+          .from("flags")
+          .select("id")
+          .eq("project_id", routeId)
+          .eq("user_id", user.id)
+          .maybeSingle()
+        if (!mErr) {
+          nextIFlagged = !!mine
+        }
+      }
+
+      const commitList = (commitRows ?? []) as CommitRow[]
+      const checkinList = (checkinRows ?? []) as CheckinRow[]
+
+      setFlagCount(fcVal)
+      setIFlagged(nextIFlagged)
+      setProject(merged)
+      setCommits(commitList)
+      setCheckins(checkinList)
+      setLoading(false)
+
+      projectPageCache.set(routeId, {
+        project: merged,
+        commits: commitList,
+        checkins: checkinList,
+        flagCount: fcVal,
+        iFlagged: nextIFlagged,
+      })
+    },
+    [routeId, user],
+  )
 
   useEffect(() => {
     syncedRef.current = false
   }, [routeId])
 
   useEffect(() => {
-    queueMicrotask(() => void load())
-  }, [load])
+    const silent = routeId != null && projectPageCache.has(routeId)
+    queueMicrotask(() => void load({ silent }))
+  }, [load, routeId])
 
   useEffect(() => {
     if (
@@ -210,7 +297,7 @@ export function ProjectPage() {
         console.error(e)
         syncedRef.current = false
       }
-      if (!cancelled) await load()
+      if (!cancelled) await load({ silent: true })
     })()
 
     return () => {
@@ -273,7 +360,7 @@ export function ProjectPage() {
     })
   }
 
-  if (loading) {
+  if (loading && !project) {
     return (
       <div className="relative mx-auto max-w-[800px] px-3 py-10 md:px-5">
         <p className="font-mono text-center text-xs text-[#888]">
@@ -376,7 +463,7 @@ export function ProjectPage() {
           projectId={project.id}
           shippedWhen={project.shipped_when}
           onClose={() => setClaimOpen(false)}
-          onSuccess={() => void load()}
+          onSuccess={() => void load({ silent: true })}
         />
       )}
       {project.status === "pending_review" &&
@@ -390,7 +477,7 @@ export function ProjectPage() {
             shippedWhen={project.shipped_when}
             proofUrl={project.proof_url}
             onClose={() => setFlagOpen(false)}
-            onSuccess={() => void load()}
+            onSuccess={() => void load({ silent: true })}
           />
         )}
 
@@ -563,7 +650,10 @@ export function ProjectPage() {
               </p>
             )}
             {project.status === "shipped" && (
-              <PayoutEmailSection project={project} onSaved={() => void load()} />
+              <PayoutEmailSection
+                project={project}
+                onSaved={() => void load({ silent: true })}
+              />
             )}
           </div>
         )}
@@ -603,7 +693,23 @@ export function ProjectPage() {
             <LogWorkInput
               variant="terminal"
               projectId={project.id}
-              onDone={() => void load()}
+              onDone={(checkin) => {
+                setCheckins((prev) => {
+                  if (prev.some((c) => c.id === checkin.id)) return prev
+                  return [checkin, ...prev]
+                })
+                const e = projectPageCache.get(project.id)
+                if (e) {
+                  projectPageCache.set(project.id, {
+                    ...e,
+                    checkins: [
+                      checkin,
+                      ...e.checkins.filter((c) => c.id !== checkin.id),
+                    ],
+                  })
+                }
+                void load({ silent: true })
+              }}
             />
           )}
 

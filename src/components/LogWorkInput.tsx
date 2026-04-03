@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
+import type { CheckinRow } from "../types/database"
 
 const MAX = 200
 
@@ -10,7 +11,7 @@ export function LogWorkInput({
   variant = "default",
 }: {
   projectId: string
-  onDone: () => void
+  onDone: (checkin: CheckinRow) => void
   /** Inside activity terminal: single-line prompt, no card frame. */
   variant?: "default" | "terminal"
 }) {
@@ -26,18 +27,26 @@ export function LogWorkInput({
     if (!t) return
     setSaving(true)
     setErr(null)
-    const { error } = await supabase.from("checkins").insert({
-      project_id: projectId,
-      user_id: user.id,
-      content: t,
-    })
+    const { data, error } = await supabase
+      .from("checkins")
+      .insert({
+        project_id: projectId,
+        user_id: user.id,
+        content: t,
+      })
+      .select()
+      .single()
     setSaving(false)
     if (error) {
       setErr(error.message)
       return
     }
+    if (!data) {
+      setErr("No row returned")
+      return
+    }
     setContent("")
-    onDone()
+    onDone(data as CheckinRow)
   }
 
   if (variant === "terminal") {

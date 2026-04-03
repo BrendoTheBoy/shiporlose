@@ -1,8 +1,14 @@
-import { Route, Routes } from "react-router-dom"
+import { Route, Routes, useParams } from "react-router-dom"
 import { AuthBar } from "./components/AuthBar"
 import { PaymentRedirectBanner } from "./components/PaymentRedirectBanner"
 import { LandingPage } from "./pages/LandingPage"
 import { ProjectPage } from "./pages/ProjectPage"
+
+/** Remount when `:id` changes so project state never shows the wrong id. */
+function ProjectPageRoute() {
+  const { id } = useParams()
+  return <ProjectPage key={id} />
+}
 
 function App() {
   return (
@@ -13,7 +19,7 @@ function App() {
       </div>
       <Routes>
         <Route path="/" element={<LandingPage />} />
-        <Route path="/project/:id" element={<ProjectPage />} />
+        <Route path="/project/:id" element={<ProjectPageRoute />} />
       </Routes>
     </div>
   )
