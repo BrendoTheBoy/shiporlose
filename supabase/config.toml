@@ -1,5 +1,9 @@
 # Supabase local / deploy config — extend with `supabase init` output as needed.
-# Stripe webhooks are verified with STRIPE_WEBHOOK_SECRET; JWT must be disabled so Stripe can POST.
+# create-checkout: gateway JWT verification off — we verify with service role + auth.getUser(jwt) in code.
+# stripe-webhook: verified with STRIPE_WEBHOOK_SECRET; Stripe has no Supabase JWT.
+
+[functions.create-checkout]
+verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false
