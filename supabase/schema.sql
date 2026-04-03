@@ -15,16 +15,24 @@ create table public.projects (
   repo_url text not null,
   repo_full_name text not null,
   stake_amount integer not null,
+  stake_status text not null default 'held',
   status text not null default 'active',
   proof_url text,
+  stripe_session_id text,
+  payment_intent_id text,
   created_at timestamptz not null default now(),
   deadline timestamptz not null,
   constraint projects_project_name_len check (char_length(project_name) <= 30),
   constraint projects_description_len check (char_length(description) <= 100),
   constraint projects_shipped_when_len check (char_length(shipped_when) <= 100),
-  constraint projects_stake_amount_check check (stake_amount in (20, 30, 50)),
+  constraint projects_stake_amount_check check (stake_amount = 30),
+  constraint projects_stake_status_check check (stake_status in ('held', 'returned', 'forfeited')),
   constraint projects_status_check check (status in ('active', 'shipped', 'abandoned'))
 );
+
+create unique index projects_stripe_session_id_unique
+  on public.projects (stripe_session_id)
+  where stripe_session_id is not null;
 
 create table public.commits (
   id uuid primary key default gen_random_uuid(),
@@ -73,6 +81,81 @@ create trigger trg_projects_deadline
   for each row
   execute function public.set_project_deadline();
 
+create or replace function public.increment_pool_entry_fee(p_month date)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into public.pools (month, total_amount)
+  values (p_month, 10)
+  on conflict (month) do update
+  set total_amount = public.pools.total_amount + 10;
+end;
+$$;
+
+revoke all on function public.increment_pool_entry_fee(date) from public;
+grant execute on function public.increment_pool_entry_fee(date) to service_role;
+
+create or replace function public.create_project_from_stripe_webhook(
+  p_stripe_session_id text,
+  p_payment_intent_id text,
+  p_user_id uuid,
+  p_github_username text,
+  p_project_name text,
+  p_description text,
+  p_shipped_when text,
+  p_repo_url text,
+  p_repo_full_name text,
+  p_pool_month date
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+  v_active int;
+begin
+  select id into v_id from public.projects where stripe_session_id = p_stripe_session_id limit 1;
+  if v_id is not null then
+    return v_id;
+  end if;
+
+  select count(*)::int into v_active from public.projects
+  where user_id = p_user_id and status = 'active';
+  if v_active > 0 then
+    raise exception 'user_already_has_active_project';
+  end if;
+
+  insert into public.projects (
+    user_id, github_username, project_name, description, shipped_when,
+    repo_url, repo_full_name, stake_amount, stake_status, stripe_session_id,
+    payment_intent_id, status
+  ) values (
+    p_user_id, p_github_username, p_project_name, p_description, p_shipped_when,
+    p_repo_url, p_repo_full_name, 30, 'held', p_stripe_session_id,
+    p_payment_intent_id, 'active'
+  ) returning id into v_id;
+
+  perform public.increment_pool_entry_fee(p_pool_month);
+
+  return v_id;
+exception
+  when unique_violation then
+    select id into v_id from public.projects where stripe_session_id = p_stripe_session_id limit 1;
+    if v_id is not null then
+      return v_id;
+    end if;
+    raise;
+end;
+$$;
+
+revoke all on function public.create_project_from_stripe_webhook from public;
+grant execute on function public.create_project_from_stripe_webhook to service_role;
+
 -- ---------------------------------------------------------------------------
 -- ROW LEVEL SECURITY
 -- ---------------------------------------------------------------------------
@@ -82,14 +165,12 @@ alter table public.commits enable row level security;
 alter table public.checkins enable row level security;
 alter table public.pools enable row level security;
 
--- projects: public read; owner insert/update
+-- projects: public read; owner update; inserts via Stripe webhook only
 create policy "projects_select_public"
   on public.projects for select
   using (true);
 
-create policy "projects_insert_owner"
-  on public.projects for insert
-  with check (auth.uid() = user_id);
+-- Inserts only via Stripe webhook (service role); users cannot bypass payment
 
 create policy "projects_update_owner"
   on public.projects for update

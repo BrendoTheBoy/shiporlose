@@ -1,4 +1,5 @@
-import { type FormEvent, useEffect, useState } from "react"
+import { type FormEvent, useState } from "react"
+import { FunctionsHttpError } from "@supabase/supabase-js"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 import { AsciiDivider } from "./AsciiDivider"
@@ -8,24 +9,33 @@ import type { GitHubRepo } from "../lib/github"
 const MAX = 100
 const MAX_NAME = 30
 
+type CheckoutResponse = { url?: string; error?: string }
+
+async function checkoutErrorMessage(
+  fnErr: unknown,
+  data: CheckoutResponse | null,
+): Promise<string> {
+  if (data?.error) return data.error
+  if (fnErr instanceof FunctionsHttpError) {
+    try {
+      const body = (await fnErr.context.json()) as { error?: string }
+      if (body.error) return body.error
+    } catch {
+      /* ignore */
+    }
+  }
+  return fnErr instanceof Error ? fnErr.message : "Could not start checkout."
+}
+
 export function DeclareForm() {
   const { user, githubUsername, githubAccessToken, signInWithGitHub } =
     useAuth()
   const [projectName, setProjectName] = useState("")
   const [building, setBuilding] = useState("")
   const [shipped, setShipped] = useState("")
-  const [stake, setStake] = useState("30")
   const [repo, setRepo] = useState<GitHubRepo | null>(null)
-  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (submitted) {
-      const t = window.setTimeout(() => setSubmitted(false), 6000)
-      return () => window.clearTimeout(t)
-    }
-  }, [submitted])
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -62,27 +72,32 @@ export function DeclareForm() {
         return
       }
 
-      const { error: insErr } = await supabase.from("projects").insert({
-        user_id: user.id,
-        github_username: githubUsername,
-        project_name: name,
-        description: desc,
-        shipped_when: ship,
-        repo_url: repo.html_url,
-        repo_full_name: repo.full_name,
-        stake_amount: Number(stake) as 20 | 30 | 50,
-        status: "active",
-      })
+      const { data, error: fnErr } =
+        await supabase.functions.invoke<CheckoutResponse>("create-checkout", {
+          body: {
+            project_name: name,
+            description: desc,
+            shipped_when: ship,
+            repo_url: repo.html_url,
+            repo_full_name: repo.full_name,
+            user_id: user.id,
+            github_username: githubUsername,
+          },
+        })
 
-      if (insErr) throw insErr
+      if (fnErr) {
+        throw new Error(await checkoutErrorMessage(fnErr, data))
+      }
+      if (data?.error) {
+        throw new Error(data.error)
+      }
+      if (!data?.url) {
+        throw new Error("Checkout did not return a URL.")
+      }
 
-      setSubmitted(true)
-      setProjectName("")
-      setBuilding("")
-      setShipped("")
-      setRepo(null)
+      window.location.assign(data.url)
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Could not declare project.")
+      setError(err instanceof Error ? err.message : "Could not start checkout.")
     } finally {
       setSubmitting(false)
     }
@@ -195,25 +210,19 @@ export function DeclareForm() {
               </span>
             </label>
 
-            <label className="mt-6 block">
-              <span className="font-mono text-[11px] uppercase tracking-wide text-[#888]">
-                Stake amount
-              </span>
-              <div className="relative mt-2">
-                <select
-                  value={stake}
-                  onChange={(e) => setStake(e.target.value)}
-                  className="terminal-input w-full cursor-pointer appearance-none border-2 border-[#1a3d1a] bg-[#0a0a0a] px-3 py-2 pr-10 font-mono text-sm text-[#39FF14]"
-                >
-                  <option value="20">$20</option>
-                  <option value="30">$30</option>
-                  <option value="50">$50</option>
-                </select>
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-[#39FF14]">
-                  ▼
-                </span>
-              </div>
-            </label>
+            <div className="mt-8 border-2 border-[#39FF14] bg-[#050505] p-4 shadow-[inset_0_0_24px_rgba(57,255,20,0.05)]">
+              <pre className="font-mono text-[11px] leading-relaxed text-[#39FF14] sm:text-xs md:text-sm whitespace-pre-wrap">
+                {`┌─────────────────────────────────┐
+│ COMMITMENT STAKE    $20        │
+│ (returned if you ship)         │
+│                                │
+│ POOL ENTRY FEE      $10        │
+│ (split among winners)          │
+│                                │
+│ TOTAL               $30        │
+└─────────────────────────────────┘`}
+              </pre>
+            </div>
 
             {error && (
               <p
@@ -229,17 +238,10 @@ export function DeclareForm() {
               disabled={submitting}
               className="glitch-btn font-display mt-8 w-full border-2 border-[#FF6B00] bg-[#0a0a0a] py-4 text-[9px] uppercase leading-relaxed text-[#FF6B00] disabled:opacity-50 sm:text-[10px]"
             >
-              {submitting ? "SUBMITTING…" : "PUT MY MONEY WHERE MY MOUTH IS"}
+              {submitting
+                ? "OPENING CHECKOUT…"
+                : "PAY $30 & LOCK IN MY COMMITMENT"}
             </button>
-
-            {submitted && (
-              <p
-                className="font-mono mt-4 border border-[#2a2a2a] bg-[#0d0d0d] p-3 text-center text-xs text-[#39FF14]"
-                role="status"
-              >
-                PROJECT DECLARED. REPO LINKED. 30 DAYS START NOW.
-              </p>
-            )}
           </form>
         )}
       </div>

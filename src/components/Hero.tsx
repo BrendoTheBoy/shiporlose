@@ -20,8 +20,9 @@ export function Hero() {
             </span>
           </h1>
           <p className="font-body mt-6 max-w-xl text-sm text-[#b8b8b8] md:text-base">
-            Put $20-50 on the line. Build in public for 30 days. Ship and split
-            the pool with winners. Abandon and forfeit your stake.
+            Put $30 on the line ($20 stake + $10 pool). Build in public for 30
+            days. Ship and split the pool with winners. Abandon and forfeit your
+            stake.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <button

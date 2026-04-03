@@ -8,8 +8,11 @@ export type ProjectRow = {
   repo_url: string
   repo_full_name: string
   stake_amount: number
+  stake_status: string
   status: string
   proof_url: string | null
+  stripe_session_id: string | null
+  payment_intent_id: string | null
   created_at: string
   deadline: string
 }
@@ -24,8 +27,11 @@ export type ProjectInsert = {
   repo_url: string
   repo_full_name: string
   stake_amount: number
+  stake_status?: string
   status?: string
   proof_url?: string | null
+  stripe_session_id?: string | null
+  payment_intent_id?: string | null
   created_at?: string
   deadline?: string
 }
@@ -108,7 +114,27 @@ export type Database = {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      increment_pool_entry_fee: {
+        Args: { p_month: string }
+        Returns: undefined
+      }
+      create_project_from_stripe_webhook: {
+        Args: {
+          p_stripe_session_id: string
+          p_payment_intent_id: string | null
+          p_user_id: string
+          p_github_username: string
+          p_project_name: string
+          p_description: string
+          p_shipped_when: string
+          p_repo_url: string
+          p_repo_full_name: string
+          p_pool_month: string
+        }
+        Returns: string
+      }
+    }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>
   }

@@ -4,11 +4,13 @@ import { Footer } from "./components/Footer"
 import { Hero } from "./components/Hero"
 import { HowItWorks } from "./components/HowItWorks"
 import { LiveProjects } from "./components/LiveProjects"
+import { PaymentRedirectBanner } from "./components/PaymentRedirectBanner"
 import { PixelDecor } from "./components/PixelDecor"
 
 function App() {
   return (
     <div className="crt-wrap min-h-dvh">
+      <PaymentRedirectBanner />
       <div className="fixed right-3 top-3 z-[10000] max-w-[min(100vw-1.5rem,420px)] md:right-6 md:top-6">
         <AuthBar />
       </div>

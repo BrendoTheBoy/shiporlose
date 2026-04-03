@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { supabase } from "../lib/supabase"
 
 function formatMoney(n: number) {
   return `$${n.toLocaleString("en-US")}`
 }
 
-function firstOfMonthDate(): string {
+/** First calendar day of current month (UTC) — matches Stripe webhook pool updates. */
+function firstOfMonthDateUtc(): string {
   const d = new Date()
-  const y = d.getFullYear()
-  const m = d.getMonth() + 1
+  const y = d.getUTCFullYear()
+  const m = d.getUTCMonth() + 1
   return `${y}-${String(m).padStart(2, "0")}-01`
 }
 
@@ -16,28 +17,51 @@ export function PoolDisplay() {
   const [amount, setAmount] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      const month = firstOfMonthDate()
-      const { data, error } = await supabase
-        .from("pools")
-        .select("total_amount")
-        .eq("month", month)
-        .maybeSingle()
+  const month = firstOfMonthDateUtc()
 
-      if (cancelled) return
-      if (!error && data?.total_amount != null) {
-        setAmount(data.total_amount)
-      } else {
-        setAmount(0)
-      }
-      setLoading(false)
-    })()
-    return () => {
-      cancelled = true
+  const fetchAmount = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("pools")
+      .select("total_amount")
+      .eq("month", month)
+      .maybeSingle()
+
+    if (!error && data?.total_amount != null) {
+      setAmount(data.total_amount)
+    } else {
+      setAmount(0)
     }
-  }, [])
+    setLoading(false)
+  }, [month])
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void fetchAmount()
+    }, 0)
+    return () => window.clearTimeout(t)
+  }, [fetchAmount])
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`pool-${month}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pools",
+          filter: `month=eq.${month}`,
+        },
+        () => {
+          void fetchAmount()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [month, fetchAmount])
 
   const str = formatMoney(loading ? 0 : amount)
   return (
@@ -62,7 +86,7 @@ export function PoolDisplay() {
         ))}
       </div>
       <p className="mt-2 font-body text-[10px] text-[#666]">
-        {loading ? "Syncing pool…" : "Month-to-date total · Stripe in Phase 3"}
+        {loading ? "Syncing pool…" : "Month-to-date total · $10 per new declaration"}
       </p>
     </div>
   )
