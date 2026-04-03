@@ -105,14 +105,15 @@ export function ClaimShippedModal({
 
         <label className="mt-5 block">
           <span className="font-mono text-[10px] uppercase tracking-wide text-[#39FF14]">
-            PROOF URL
+            PROOF URL — link where anyone can verify your project is live (app
+            store, live site, GitHub release, product page)
           </span>
           <input
             type="url"
             value={proofUrl}
             onChange={(e) => setProofUrl(e.target.value)}
             className="mt-2 w-full border-2 border-[#1a3d1a] bg-[#050505] px-2 py-2 font-mono text-[12px] text-[#39FF14] placeholder:text-[#444]"
-            placeholder="https://myapp.com or link to demo video"
+            placeholder="https://myapp.com or link to product page"
             autoComplete="off"
           />
         </label>

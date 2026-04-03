@@ -7,3 +7,6 @@ verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.resolve-projects]
+verify_jwt = false

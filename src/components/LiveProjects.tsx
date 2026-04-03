@@ -11,6 +11,7 @@ import {
 import type { CommitRow, ProjectRow, ProjectStatus } from "../types/database"
 import { AsciiDivider } from "./AsciiDivider"
 import { ClaimShippedModal } from "./ClaimShippedModal"
+import { FlagSubmissionModal } from "./FlagSubmissionModal"
 
 type ProjectWithCommits = ProjectRow & {
   commits: CommitRow[]
@@ -134,7 +135,7 @@ function cardFrameClass(
   passed: boolean,
 ): string {
   if (status === "abandoned") {
-    return "border-[#3a3a3a] opacity-[0.72]"
+    return "border-[#3a3a3a] opacity-60"
   }
   if (status === "shipped") {
     return "border-[#39FF14] shadow-[0_0_28px_rgba(57,255,20,0.14)]"
@@ -249,6 +250,10 @@ export function LiveProjects() {
   const [fetchErr, setFetchErr] = useState<string | null>(null)
   const syncedRef = useRef<Set<string>>(new Set())
   const [claimModalId, setClaimModalId] = useState<string | null>(null)
+  const [flagModalId, setFlagModalId] = useState<string | null>(null)
+  const [myFlaggedProjectIds, setMyFlaggedProjectIds] = useState<Set<string>>(
+    () => new Set(),
+  )
   const [proofSuccessId, setProofSuccessId] = useState<string | null>(null)
   const [, setTick] = useState(0)
 
@@ -277,6 +282,7 @@ export function LiveProjects() {
       setFetchErr(pErr.message)
       setRows([])
       setFlagCounts({})
+      setMyFlaggedProjectIds(new Set())
       setLoading(false)
       return
     }
@@ -286,6 +292,7 @@ export function LiveProjects() {
     if (ids.length === 0) {
       setRows([])
       setFlagCounts({})
+      setMyFlaggedProjectIds(new Set())
       setLoading(false)
       return
     }
@@ -299,6 +306,7 @@ export function LiveProjects() {
       setFetchErr(cErr.message)
       setRows([])
       setFlagCounts({})
+      setMyFlaggedProjectIds(new Set())
       setLoading(false)
       return
     }
@@ -312,6 +320,7 @@ export function LiveProjects() {
       setFetchErr(fErr.message)
       setRows([])
       setFlagCounts({})
+      setMyFlaggedProjectIds(new Set())
       setLoading(false)
       return
     }
@@ -322,6 +331,27 @@ export function LiveProjects() {
       counts[pid] = (counts[pid] ?? 0) + 1
     }
     setFlagCounts(counts)
+
+    if (user?.id) {
+      const { data: mine, error: mErr } = await supabase
+        .from("flags")
+        .select("project_id")
+        .eq("user_id", user.id)
+        .in("project_id", ids)
+      if (mErr) {
+        setFetchErr(mErr.message)
+        setRows([])
+        setFlagCounts({})
+        setMyFlaggedProjectIds(new Set())
+        setLoading(false)
+        return
+      }
+      setMyFlaggedProjectIds(
+        new Set((mine ?? []).map((r) => r.project_id as string)),
+      )
+    } else {
+      setMyFlaggedProjectIds(new Set())
+    }
 
     const byProject = new Map<string, CommitRow[]>()
     for (const id of ids) byProject.set(id, [])
@@ -342,7 +372,7 @@ export function LiveProjects() {
 
     setRows(merged)
     setLoading(false)
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -406,6 +436,7 @@ export function LiveProjects() {
   const showMock = !loading && rows.length === 0 && !fetchErr
 
   const claimProject = rows.find((r) => r.id === claimModalId)
+  const flagProject = rows.find((r) => r.id === flagModalId)
 
   return (
     <section className="border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20">
@@ -419,6 +450,17 @@ export function LiveProjects() {
             setProofSuccessId(claimProject.id)
             void load()
           }}
+        />
+      )}
+      {flagProject && flagProject.proof_url && (
+        <FlagSubmissionModal
+          open={!!flagModalId}
+          projectId={flagProject.id}
+          projectName={flagProject.project_name}
+          shippedWhen={flagProject.shipped_when}
+          proofUrl={flagProject.proof_url}
+          onClose={() => setFlagModalId(null)}
+          onSuccess={() => void load()}
         />
       )}
       <AsciiDivider label="LIVE PROJECTS — PUBLIC FEED" />
@@ -490,7 +532,7 @@ export function LiveProjects() {
                       )}
                       {p.status === "shipped" && (
                         <span className="font-mono text-[10px] uppercase tracking-wide border border-[#2a6a2a] bg-[#081008] px-2 py-0.5 text-[#39FF14]">
-                          SHIPPED
+                          SHIPPED ✓
                         </span>
                       )}
                       {p.status === "abandoned" && (
@@ -563,7 +605,7 @@ export function LiveProjects() {
 
                   {p.status === "shipped" && p.shipped_at && (
                     <p className="font-mono mt-2 text-[10px] text-[#39FF14]">
-                      OFFICIALLY SHIPPED:{" "}
+                      SHIPPED AT:{" "}
                       {new Date(p.shipped_at).toLocaleString(undefined, {
                         dateStyle: "medium",
                         timeStyle: "short",
@@ -572,14 +614,25 @@ export function LiveProjects() {
                   )}
 
                   {p.status === "abandoned" && (
-                    <p className="font-mono mt-3 text-[10px] uppercase tracking-wide text-[#888]">
-                      STAKE FORFEITED
+                    <p className="font-mono mt-3 text-[10px] uppercase tracking-wide text-[#666]">
+                      {p.abandoned_at
+                        ? `ABANDONED: ${new Date(p.abandoned_at).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })}`
+                        : "DEADLINE PASSED"}
+                    </p>
+                  )}
+
+                  {p.status === "flagged" && (
+                    <p className="font-mono mt-2 text-[10px] leading-relaxed text-[#888]">
+                      This submission is being reviewed by the ShipOrLose team.
                     </p>
                   )}
 
                   {(p.status === "pending_review" || p.status === "flagged") && (
                     <p className="font-mono mt-2 text-[10px] text-[#888]">
-                      FLAGS ON THIS CLAIM: {flags}
+                      FLAGS: {flags}
                     </p>
                   )}
 
@@ -602,7 +655,7 @@ export function LiveProjects() {
                   </div>
 
                   <dl className="mt-4 grid grid-cols-2 gap-2 font-mono text-[11px] md:grid-cols-3 md:text-xs">
-                    {p.status === "pending_review" || p.status === "flagged" ? (
+                    {p.status === "pending_review" ? (
                       <div className="border border-[#2a2a2a] bg-[#080808] p-2">
                         <dt className="text-[#666]">Review</dt>
                         <dd className="text-lg font-semibold tabular-nums text-[#FFAA00]">
@@ -611,20 +664,41 @@ export function LiveProjects() {
                             : "—"}
                         </dd>
                       </div>
+                    ) : p.status === "flagged" ? (
+                      <div className="border border-[#2a2a2a] bg-[#080808] p-2">
+                        <dt className="text-[#666]">Review</dt>
+                        <dd className="text-lg font-semibold tabular-nums text-[#888]">
+                          —
+                        </dd>
+                      </div>
                     ) : (
                       <div className="border border-[#2a2a2a] bg-[#080808] p-2">
                         <dt className="text-[#666]">Days left</dt>
                         <dd
                           className={`text-lg font-semibold tabular-nums ${atRisk ? "text-[#FF6B00]" : "text-[#39FF14]"}`}
                         >
-                          {p.status === "shipped" ? "—" : dl}
+                          {p.status === "shipped" || p.status === "abandoned"
+                            ? "—"
+                            : dl}
                         </dd>
                       </div>
                     )}
                     <div className="border border-[#2a2a2a] bg-[#080808] p-2">
                       <dt className="text-[#666]">Stake</dt>
-                      <dd className="text-lg font-semibold tabular-nums text-[#FF6B00]">
-                        ${p.stake_amount}
+                      <dd
+                        className={`text-lg font-semibold tabular-nums ${
+                          p.status === "shipped"
+                            ? "text-[#39FF14]"
+                            : p.status === "abandoned"
+                              ? "text-red-400"
+                              : "text-[#FF6B00]"
+                        }`}
+                      >
+                        {p.status === "shipped"
+                          ? "RETURNED"
+                          : p.status === "abandoned"
+                            ? "FORFEITED"
+                            : `$${p.stake_amount}`}
                       </dd>
                     </div>
                     <div className="col-span-2 border border-[#2a2a2a] bg-[#080808] p-2 md:col-span-1">
@@ -668,17 +742,28 @@ export function LiveProjects() {
                     </div>
                   )}
 
-                  {(p.status === "pending_review" || p.status === "flagged") &&
-                    !own && (
+                  {p.status === "pending_review" &&
+                    !own &&
+                    user &&
+                    p.proof_url && (
                       <div className="mt-3">
-                        <button
-                          type="button"
-                          disabled
-                          className="w-full border-2 border-[#553300] bg-[#0a0a0a] py-2 font-mono text-[9px] uppercase tracking-wide text-[#553300]"
-                          title="Coming in Part 2"
-                        >
-                          FLAG THIS SUBMISSION
-                        </button>
+                        {myFlaggedProjectIds.has(p.id) ? (
+                          <button
+                            type="button"
+                            disabled
+                            className="w-full border-2 border-[#2a4a2a] bg-[#0a0a0a] py-2 font-mono text-[9px] uppercase tracking-wide text-[#39FF14] opacity-80"
+                          >
+                            FLAGGED ✓
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setFlagModalId(p.id)}
+                            className="w-full border-2 border-[#cc8800] bg-[#0a0a0a] py-2 font-mono text-[9px] uppercase tracking-wide text-[#FFAA00] hover:bg-[#1a1200]"
+                          >
+                            FLAG THIS SUBMISSION
+                          </button>
+                        )}
                       </div>
                     )}
 
