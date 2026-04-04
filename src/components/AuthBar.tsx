@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { supabase } from "../lib/supabase"
+import { useUserProjectsFeed } from "../context/UserProjectsFeedContext"
 
 function GitHubMark({ className }: { className?: string }) {
   return (
@@ -18,21 +17,6 @@ function GitHubMark({ className }: { className?: string }) {
   )
 }
 
-const FEED_NAV_STATUSES = [
-  "active",
-  "pending_review",
-  "flagged",
-  "shipped",
-] as const
-
-function statusRank(s: string): number {
-  if (s === "active") return 0
-  if (s === "pending_review") return 1
-  if (s === "flagged") return 2
-  if (s === "shipped") return 3
-  return 99
-}
-
 export function AuthBar() {
   const {
     user,
@@ -43,49 +27,11 @@ export function AuthBar() {
   } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [myProjectId, setMyProjectId] = useState<string | null>(null)
+  const { navProjectId: myProjectId } = useUserProjectsFeed()
 
   const avatarUrl =
     (user?.user_metadata?.avatar_url as string | undefined) ??
     (githubUsername ? `https://github.com/${githubUsername}.png` : null)
-
-  useEffect(() => {
-    if (!user?.id) {
-      queueMicrotask(() => setMyProjectId(null))
-      return
-    }
-    let cancelled = false
-    void (async () => {
-      const { data, error } = await supabase
-        .from("projects")
-        .select("id, status, created_at")
-        .eq("user_id", user.id)
-        .in("status", [...FEED_NAV_STATUSES])
-        .order("created_at", { ascending: false })
-      if (cancelled || error) return
-      const rows = (data ?? []) as {
-        id: string
-        status: string
-        created_at: string
-      }[]
-      if (rows.length === 0) {
-        setMyProjectId(null)
-        return
-      }
-      rows.sort((a, b) => {
-        const ra = statusRank(a.status)
-        const rb = statusRank(b.status)
-        if (ra !== rb) return ra - rb
-        return (
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )
-      })
-      setMyProjectId(rows[0]?.id ?? null)
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [user?.id])
 
   if (loading) {
     return (

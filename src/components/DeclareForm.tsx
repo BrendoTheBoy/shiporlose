@@ -1,6 +1,8 @@
 import { type FormEvent, useState } from "react"
+import { Link } from "react-router-dom"
 import { FunctionsHttpError } from "@supabase/supabase-js"
 import { useAuth } from "../context/AuthContext"
+import { useUserProjectsFeed } from "../context/UserProjectsFeedContext"
 import { supabase } from "../lib/supabase"
 import { AsciiDivider } from "./AsciiDivider"
 import { RepoSelect } from "./RepoSelect"
@@ -28,8 +30,14 @@ async function checkoutErrorMessage(
 }
 
 export function DeclareForm() {
-  const { user, githubUsername, githubAccessToken, signInWithGitHub } =
-    useAuth()
+  const {
+    user,
+    loading: authLoading,
+    githubUsername,
+    githubAccessToken,
+    signInWithGitHub,
+  } = useAuth()
+  const { declareBlockedProjectId, projectsLoading } = useUserProjectsFeed()
   const [projectName, setProjectName] = useState("")
   const [building, setBuilding] = useState("")
   const [shipped, setShipped] = useState("")
@@ -116,6 +124,7 @@ export function DeclareForm() {
   }
 
   const loggedOut = !user
+  const showProjectFetchWait = Boolean(user) && projectsLoading
 
   return (
     <section
@@ -127,7 +136,11 @@ export function DeclareForm() {
         <h2 className="font-display mb-8 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
           DECLARE YOUR PROJECT
         </h2>
-        {loggedOut ? (
+        {authLoading ? (
+          <div className="border-2 border-[#39FF14] bg-[#050505] p-6 shadow-[inset_0_0_40px_rgba(57,255,20,0.06)] md:p-8">
+            <p className="font-mono text-xs text-[#555]">…</p>
+          </div>
+        ) : loggedOut ? (
           <div className="border-2 border-[#39FF14] bg-[#050505] p-6 shadow-[inset_0_0_40px_rgba(57,255,20,0.06)] md:p-8">
             <p className="font-mono text-xs leading-relaxed text-[#39FF14]">
               <span className="text-[#FF6B00]">guest@shiporlose:~$</span> ERROR:
@@ -141,6 +154,22 @@ export function DeclareForm() {
               </button>{" "}
               to declare.
             </p>
+          </div>
+        ) : showProjectFetchWait ? (
+          <div className="border-2 border-[#39FF14] bg-[#050505] p-6 shadow-[inset_0_0_40px_rgba(57,255,20,0.06)] md:p-8">
+            <p className="font-mono text-xs text-[#555]">…</p>
+          </div>
+        ) : declareBlockedProjectId ? (
+          <div className="border-2 border-[#39FF14] bg-[#050505] p-6 shadow-[inset_0_0_40px_rgba(57,255,20,0.06)] md:p-8">
+            <p className="font-mono text-xs leading-relaxed text-[#39FF14] uppercase tracking-wide">
+              YOU HAVE AN ACTIVE PROJECT. SHIP IT OR LOSE IT.
+            </p>
+            <Link
+              to={`/project/${declareBlockedProjectId}`}
+              className="glitch-btn font-display mt-6 inline-block border-2 border-[#FF6B00] bg-[#0a0a0a] px-4 py-3 text-[9px] uppercase tracking-wide text-[#FF6B00] hover:bg-[#120a04] sm:text-[10px]"
+            >
+              GO TO MY PROJECT →
+            </Link>
           </div>
         ) : (
           <form
