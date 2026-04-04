@@ -204,6 +204,11 @@
   white-space: nowrap;
   border: 0;
 }
+.ship-pixel-art {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
 .skip-link:focus {
   position: fixed;
   left: 1rem;

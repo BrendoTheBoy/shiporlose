@@ -9,7 +9,7 @@ export function Hero() {
 
   return (
     <header className="relative border-b-2 border-[#1f1f1f] px-4 pb-10 pt-4 md:px-8 md:pb-12 md:pt-6">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-x-12 lg:gap-y-8 xl:gap-x-14">
         <div className="min-w-0 flex-1 text-center sm:text-left">
           <div className="mb-3 flex flex-wrap items-center justify-center gap-3 sm:justify-start md:mb-4 md:gap-4">
             <HeroShipLogo />
