@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { DeclareForm } from "../components/DeclareForm"
+import { scrollToDeclareSection } from "../lib/scrollToDeclare"
 import { Footer } from "../components/Footer"
 import { Hero } from "../components/Hero"
 import { HowItWorks } from "../components/HowItWorks"
@@ -11,11 +12,11 @@ export function LandingPage() {
   const location = useLocation()
 
   useEffect(() => {
-    if (location.hash === "#declare") {
-      window.requestAnimationFrame(() => {
-        document.getElementById("declare")?.scrollIntoView({ behavior: "smooth" })
-      })
-    }
+    if (location.hash !== "#declare") return
+    const t = window.setTimeout(() => {
+      scrollToDeclareSection()
+    }, 0)
+    return () => window.clearTimeout(t)
   }, [location.hash, location.pathname])
 
   return (

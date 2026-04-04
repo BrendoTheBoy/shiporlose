@@ -1,15 +1,20 @@
-const INNER = 78
+/** Tight terminal-style box (~800px max), centered; sits flush above section content. */
+const INNER = 44
 
 export function AsciiDivider({ label }: { label?: string }) {
   const line = `+${"-".repeat(INNER)}+`
-  const mid = label
-    ? `| ${label.padEnd(INNER - 2, " ").slice(0, INNER - 2)} |`
-    : `| ${" ".repeat(INNER - 2)} |`
+  const innerW = INNER - 2
+  const text = label
+    ? label.length <= innerW
+      ? label.padEnd(innerW, " ")
+      : `${label.slice(0, innerW - 1)}…`
+    : " ".repeat(innerW)
+  const mid = `| ${text} |`
 
   return (
-    <div className="my-4">
+    <div className="mx-auto mb-3 mt-0 w-full max-w-[800px] px-4">
       <pre
-        className="font-body mx-auto max-w-[min(100%,56rem)] overflow-x-auto px-4 text-[9px] leading-tight opacity-30 sm:text-[10px] md:text-[11px]"
+        className="font-mono mx-auto w-max max-w-full text-[9px] leading-tight text-[#555] sm:text-[10px]"
         aria-hidden="true"
       >
         {line}

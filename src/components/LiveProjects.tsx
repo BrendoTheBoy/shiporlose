@@ -252,12 +252,9 @@ export function LiveProjects() {
 
   return (
     <section className="border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20">
-      <AsciiDivider label="LIVE PROJECTS — PUBLIC FEED" />
+      <h2 className="sr-only">Live projects</h2>
+      <AsciiDivider label="LIVE PROJECTS" />
       <div className="mx-auto mt-10 max-w-5xl">
-        <h2 className="font-display mb-10 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
-          LIVE PROJECTS
-        </h2>
-
         {loading && (
           <p className="font-mono text-center text-xs text-[#888]">
             LOADING FEED…

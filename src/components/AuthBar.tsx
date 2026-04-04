@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useUserProjectsFeed } from "../context/UserProjectsFeedContext"
+import { scrollToDeclareSection } from "../lib/scrollToDeclare"
 
 function GitHubMark({ className }: { className?: string }) {
   return (
@@ -56,7 +57,7 @@ export function AuthBar() {
 
   const goDeclare = () => {
     if (location.pathname === "/") {
-      document.getElementById("declare")?.scrollIntoView({ behavior: "smooth" })
+      scrollToDeclareSection()
     } else {
       void navigate({ pathname: "/", hash: "declare" })
     }

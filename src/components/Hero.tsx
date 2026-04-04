@@ -1,12 +1,13 @@
+import { scrollToDeclareSection } from "../lib/scrollToDeclare"
 import { PoolDisplay } from "./PoolDisplay"
 
 export function Hero() {
   const scrollToDeclare = () => {
-    document.getElementById("declare")?.scrollIntoView({ behavior: "smooth" })
+    scrollToDeclareSection()
   }
 
   return (
-    <header className="relative border-b-2 border-[#1f1f1f] px-4 pb-16 pt-12 md:px-8 md:pb-24 md:pt-16">
+    <header className="relative border-b-2 border-[#1f1f1f] px-4 pb-16 pt-8 md:px-8 md:pb-24 md:pt-10">
       <div className="mx-auto flex max-w-5xl flex-col gap-10 lg:flex-row lg:items-start lg:justify-between lg:gap-12">
         <div className="max-w-3xl">
           <p className="font-display mb-4 text-[9px] uppercase leading-relaxed text-[#FF6B00] sm:text-[10px] md:text-[11px]">

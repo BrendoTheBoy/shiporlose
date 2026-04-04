@@ -17,7 +17,7 @@ function App() {
     <div className="crt-wrap min-h-dvh">
       <PaymentRedirectBanner />
       <SiteHeader />
-      <main className="pt-14 md:pt-16">
+      <main className="pt-16 sm:pt-[4.5rem] md:pt-20">
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/fame" element={<WallOfFamePage />} />

@@ -4,33 +4,31 @@ const steps = [
   {
     key: "01",
     title: "DECLARE",
-    body: "Write one sentence about what you're building and what \"shipped\" means.",
+    body: `Sign in with GitHub, pick your repo, and define what "shipped" means. This becomes your public contract — no moving the goalposts.`,
   },
   {
     key: "02",
     title: "STAKE",
-    body: "Put $20-50 on the line. Money goes into the monthly pool.",
+    body: "Pay $30 to lock in. $20 commitment stake + $10 pool entry fee. The pool grows with every builder who joins.",
   },
   {
     key: "03",
     title: "BUILD",
-    body: "Check in daily with one sentence. Your streak is public.",
+    body: "You have 30 days. Push commits, log non-code progress. Your activity is tracked and public. Everyone can see if you're actually working.",
   },
   {
     key: "04",
     title: "SHIP OR LOSE",
-    body: "Ship by day 30 and split the pool. Abandon and lose your stake.",
+    body: "Submit proof you shipped. The community has 48 hours to verify. Ship and get your $20 back + a share of the pool. Abandon and your stake is forfeited. Wall of Fame or Wall of Shame — your call.",
   },
 ] as const
 
 export function HowItWorks() {
   return (
     <section className="border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20">
-      <AsciiDivider label="HOW IT WORKS — READ CAREFULLY" />
+      <h2 className="sr-only">How it works</h2>
+      <AsciiDivider label="HOW IT WORKS" />
       <div className="mx-auto mt-10 max-w-5xl">
-        <h2 className="font-display mb-10 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
-          HOW IT WORKS
-        </h2>
         <div className="grid gap-4 md:grid-cols-2">
           {steps.map((s) => (
             <article

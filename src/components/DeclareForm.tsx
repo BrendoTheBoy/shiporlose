@@ -129,13 +129,11 @@ export function DeclareForm() {
   return (
     <section
       id="declare"
-      className="border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20"
+      className="scroll-mt-[5.75rem] border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20"
     >
-      <AsciiDivider label="DECLARE — TERMINAL SESSION" />
+      <h2 className="sr-only">Declare your project</h2>
+      <AsciiDivider label="DECLARE YOUR PROJECT" />
       <div className="mx-auto mt-10 max-w-2xl">
-        <h2 className="font-display mb-8 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
-          DECLARE YOUR PROJECT
-        </h2>
         {authLoading ? (
           <div className="border-2 border-[#39FF14] bg-[#050505] p-6 shadow-[inset_0_0_40px_rgba(57,255,20,0.06)] md:p-8">
             <p className="font-mono text-xs text-[#555]">…</p>
