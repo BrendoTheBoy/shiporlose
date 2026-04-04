@@ -17,9 +17,6 @@ export function SiteHeader() {
         className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-2.5"
         aria-label="Site"
       >
-        <Link to="/" className={navBoxGreen}>
-          FEED
-        </Link>
         <Link to="/fame" className={navBoxGreen}>
           WALL OF FAME
         </Link>
