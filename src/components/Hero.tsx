@@ -9,9 +9,9 @@ export function Hero() {
 
   return (
     <header className="relative border-b-2 border-[#1f1f1f] px-4 pb-10 pt-4 md:px-8 md:pb-12 md:pt-6">
-      <div className="mx-auto flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-center lg:justify-between lg:gap-x-12 lg:gap-y-8 xl:gap-x-14">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-center lg:justify-center lg:gap-x-10 lg:gap-y-8 xl:gap-x-12">
         <div className="min-w-0 flex-1 text-center sm:text-left">
-          <div className="mb-3 flex flex-wrap items-center justify-center gap-3 sm:justify-start md:mb-4 md:gap-4">
+          <div className="mb-3 flex flex-wrap items-center justify-center gap-1.5 sm:justify-start md:mb-4 md:gap-2">
             <HeroShipLogo />
             <p className="font-display text-[clamp(0.55rem,1.15vw,0.85rem)] leading-relaxed text-[#FF6B00]">
               SHIP OR LOSE
@@ -37,7 +37,7 @@ export function Hero() {
             </button>
           </div>
         </div>
-        <div className="w-full max-w-sm shrink-0 lg:w-auto lg:max-w-[min(100%,20rem)]">
+        <div className="w-full max-w-sm shrink-0 lg:w-auto lg:max-w-[min(100%,22rem)]">
           <PoolDisplay />
         </div>
       </div>

@@ -66,26 +66,26 @@ export function PoolDisplay() {
   const str = formatMoney(loading ? 0 : amount)
   return (
     <div
-      className="lcd-glow border-2 border-[#39FF14] bg-[#050505] px-4 py-3 shadow-[inset_0_0_20px_rgba(57,255,20,0.12),0_0_30px_rgba(57,255,20,0.15)]"
+      className="lcd-glow border-2 border-[#39FF14] bg-[#050505] px-4 py-3 shadow-[inset_0_0_20px_rgba(57,255,20,0.12),0_0_30px_rgba(57,255,20,0.15)] md:px-5 md:py-4 lg:px-6 lg:py-5"
       aria-live="polite"
     >
-      <p className="font-display mb-2 text-[8px] uppercase tracking-widest text-[#FF6B00] sm:text-[9px]">
+      <p className="font-display mb-2 text-[8px] uppercase tracking-widest text-[#FF6B00] sm:mb-2.5 sm:text-[9px] lg:text-[10px]">
         Current pool
       </p>
       <div
-        className="flex flex-wrap items-baseline justify-center gap-0.5 font-mono text-2xl font-semibold tabular-nums tracking-widest text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.55)] sm:text-3xl md:text-4xl"
+        className="flex flex-wrap items-baseline justify-center gap-0.5 font-mono text-2xl font-semibold tabular-nums tracking-widest text-[#39FF14] drop-shadow-[0_0_8px_rgba(57,255,20,0.55)] sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl"
         style={{ fontFamily: '"IBM Plex Mono", monospace' }}
       >
         {str.split("").map((ch, i) => (
           <span
             key={`${i}-${ch}`}
-            className="inline-block min-w-[0.65em] border border-[#1a3d1a] bg-[#0c120c] px-1 py-0.5 text-center"
+            className="inline-block min-w-[0.65em] border border-[#1a3d1a] bg-[#0c120c] px-1 py-0.5 text-center lg:px-1.5 lg:py-1"
           >
             {ch}
           </span>
         ))}
       </div>
-      <p className="mt-2 font-body text-[10px] text-[#666]">
+      <p className="mt-2 font-body text-[10px] text-[#666] lg:mt-2.5 lg:text-[11px]">
         {loading ? "Syncing pool…" : "Month-to-date total · $10 per new declaration"}
       </p>
     </div>

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useUserProjectsFeed } from "../context/UserProjectsFeedContext"
@@ -29,10 +30,28 @@ export function AuthBar() {
   const navigate = useNavigate()
   const location = useLocation()
   const { navProjectId: myProjectId } = useUserProjectsFeed()
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const userMenuRef = useRef<HTMLDivElement>(null)
 
   const avatarUrl =
     (user?.user_metadata?.avatar_url as string | undefined) ??
     (githubUsername ? `https://github.com/${githubUsername}.png` : null)
+
+  useEffect(() => {
+    if (!userMenuOpen) return
+    const onPointerDown = (e: MouseEvent | TouchEvent) => {
+      const node = userMenuRef.current
+      const target = e.target
+      if (!node || !(target instanceof Node) || node.contains(target)) return
+      setUserMenuOpen(false)
+    }
+    document.addEventListener("mousedown", onPointerDown)
+    document.addEventListener("touchstart", onPointerDown)
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown)
+      document.removeEventListener("touchstart", onPointerDown)
+    }
+  }, [userMenuOpen])
 
   if (loading) {
     return (
@@ -81,30 +100,47 @@ export function AuthBar() {
           DECLARE PROJECT
         </button>
       )}
-      <button
-        type="button"
-        onClick={() => void signOut()}
-        className="shrink-0 border-2 border-[#FF6B00] bg-[#0a0a0a] px-2 py-1 font-mono text-[8px] uppercase tracking-wide text-[#FF6B00] hover:bg-[#120a04] sm:text-[9px]"
+      <div
+        ref={userMenuRef}
+        className="relative flex min-w-0 items-center gap-0"
       >
-        LOGOUT
-      </button>
-      <div className="flex min-w-0 items-center gap-2">
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt=""
-            className="h-8 w-8 shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] object-cover"
-            width={32}
-            height={32}
-          />
-        ) : (
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-[#39FF14] bg-[#0a0a0a] font-mono text-[10px] text-[#39FF14]">
-            GH
+        <div
+          className={`min-w-0 overflow-hidden transition-[max-width,opacity] duration-300 ease-in-out ${!userMenuOpen ? "pointer-events-none" : ""}`}
+          style={{ maxWidth: userMenuOpen ? 128 : 0, opacity: userMenuOpen ? 1 : 0 }}
+          aria-hidden={!userMenuOpen}
+        >
+          <button
+            type="button"
+            onClick={() => void signOut()}
+            className="mr-2 shrink-0 border-2 border-[#FF6B00] bg-[#0a0a0a] px-2 py-1 font-mono text-[8px] uppercase tracking-wide text-[#FF6B00] hover:bg-[#120a04] sm:text-[9px]"
+          >
+            LOGOUT
+          </button>
+        </div>
+        <button
+          type="button"
+          onClick={() => setUserMenuOpen((o) => !o)}
+          aria-expanded={userMenuOpen}
+          aria-label={userMenuOpen ? "Close account menu" : "Open account menu"}
+          className="flex min-w-0 items-center gap-2 text-left"
+        >
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt=""
+              className="h-8 w-8 shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] object-cover"
+              width={32}
+              height={32}
+            />
+          ) : (
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-[#39FF14] bg-[#0a0a0a] font-mono text-[10px] text-[#39FF14]">
+              GH
+            </span>
+          )}
+          <span className="max-w-[100px] truncate font-mono text-[10px] uppercase text-[#39FF14] sm:max-w-[160px]">
+            {githubUsername ?? user.email ?? "signed in"}
           </span>
-        )}
-        <span className="max-w-[100px] truncate font-mono text-[10px] uppercase text-[#39FF14] sm:max-w-[160px]">
-          {githubUsername ?? user.email ?? "signed in"}
-        </span>
+        </button>
       </div>
     </div>
   )

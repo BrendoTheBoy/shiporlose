@@ -130,7 +130,10 @@ export function DeclareForm() {
       id="declare"
       className="scroll-mt-[5.75rem] border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20"
     >
-      <h2 className="font-display mb-8 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
+      <h2
+        id="declare-heading"
+        className="font-display mb-8 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm"
+      >
         DECLARE YOUR PROJECT
       </h2>
       <div className="mx-auto max-w-2xl">
@@ -249,18 +252,44 @@ export function DeclareForm() {
               </span>
             </label>
 
-            <div className="mt-8 border-2 border-[#39FF14] bg-[#050505] p-4 shadow-[inset_0_0_24px_rgba(57,255,20,0.05)]">
-              <pre className="font-mono text-[11px] leading-relaxed text-[#39FF14] sm:text-xs md:text-sm whitespace-pre-wrap">
-                {`┌─────────────────────────────────┐
-│ COMMITMENT STAKE    $20        │
-│ (returned if you ship)         │
-│                                │
-│ POOL ENTRY FEE      $10        │
-│ (split among winners)          │
-│                                │
-│ TOTAL               $30        │
-└─────────────────────────────────┘`}
-              </pre>
+            <div className="mt-8 border border-[#39FF14]/80 bg-[#050505] px-2.5 py-1.5 shadow-[inset_0_0_10px_rgba(57,255,20,0.04)]">
+              <div
+                className="space-y-1 font-mono text-[10px] leading-tight text-[#39FF14] sm:text-[11px]"
+                style={{ fontFamily: '"IBM Plex Mono", monospace' }}
+              >
+                <div className="flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5">
+                  <span className="shrink-0 text-[#888]">COMMITMENT STAKE</span>
+                  <span
+                    className="mb-0.5 min-h-[1px] min-w-[0.5rem] flex-1 border-b border-dotted border-[#2a4a2a]"
+                    aria-hidden
+                  />
+                  <span className="shrink-0 tabular-nums">$20</span>
+                  <span className="w-full shrink-0 text-[9px] text-[#555] sm:w-auto sm:pl-1">
+                    (returned if you ship)
+                  </span>
+                </div>
+                <div className="flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5">
+                  <span className="shrink-0 text-[#888]">POOL ENTRY FEE</span>
+                  <span
+                    className="mb-0.5 min-h-[1px] min-w-[0.5rem] flex-1 border-b border-dotted border-[#2a4a2a]"
+                    aria-hidden
+                  />
+                  <span className="shrink-0 tabular-nums">$10</span>
+                  <span className="w-full shrink-0 text-[9px] text-[#555] sm:w-auto sm:pl-1">
+                    (split among winners)
+                  </span>
+                </div>
+                <div className="border-t border-[#1a3d1a] pt-1">
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-1">
+                    <span className="shrink-0 font-semibold text-[#888]">TOTAL</span>
+                    <span
+                      className="mb-0.5 min-h-[1px] min-w-[0.5rem] flex-1 border-b border-dotted border-[#2a4a2a]"
+                      aria-hidden
+                    />
+                    <span className="shrink-0 tabular-nums font-semibold">$30</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {error && (
