@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from "react"
 
-const SAILING_SRC = [
+/** All frames: 1–3 sailing, 4 tilting, 5 sinking */
+const FRAMES = [
   "/ship-sailing.png",
   "/ship-frame2.png",
   "/ship-frame3.png",
+  "/ship-frame4.png",
+  "/ship-sinking.png",
 ] as const
 
-/** 1 → 2 → 3 → 2 → 1 → 2 → 3 → 2 (indices into SAILING_SRC) */
-const SAILING_SEQUENCE = [0, 1, 2, 1, 0, 1, 2, 1] as const
+/** Sailing loop: 1 → 2 → 3 → 2 → … (indices into first three frames) */
+const SAILING_SEQUENCE = [0, 1, 2, 1] as const
 
-const SINKING_SRC = "/ship-sinking.png"
 const SPRITE_MS = 500
 const INTERRUPT_DELAY_MS = 10_000
-const FADE_MS = 300
-const SINKING_HOLD_MS = 2000
+const FRAME4_MS = 1000
+const FRAME5_MS = 1500
+
+type Phase = "sailing" | "frame4" | "frame5"
 
 export function HeroShipLogo() {
   const [seqStep, setSeqStep] = useState(0)
-  const [sinkingShown, setSinkingShown] = useState(false)
+  const [phase, setPhase] = useState<Phase>("sailing")
   const interruptActiveRef = useRef(false)
   const timersRef = useRef<number[]>([])
 
@@ -32,19 +36,17 @@ export function HeroShipLogo() {
     clearInterruptTimers()
     const t1 = window.setTimeout(() => {
       interruptActiveRef.current = true
-      setSinkingShown(true)
+      setPhase("frame4")
       const t2 = window.setTimeout(() => {
+        setPhase("frame5")
         const t3 = window.setTimeout(() => {
-          setSinkingShown(false)
+          setPhase("sailing")
           setSeqStep(0)
-          const t4 = window.setTimeout(() => {
-            interruptActiveRef.current = false
-            scheduleInterruptCycle()
-          }, FADE_MS)
-          timersRef.current.push(t4)
-        }, SINKING_HOLD_MS)
+          interruptActiveRef.current = false
+          scheduleInterruptCycle()
+        }, FRAME5_MS)
         timersRef.current.push(t3)
-      }, FADE_MS)
+      }, FRAME4_MS)
       timersRef.current.push(t2)
     }, INTERRUPT_DELAY_MS)
     timersRef.current.push(t1)
@@ -68,41 +70,32 @@ export function HeroShipLogo() {
     return () => window.clearInterval(id)
   }, [])
 
-  const sailingIndex = SAILING_SEQUENCE[seqStep % SAILING_SEQUENCE.length]
+  const displayIndex =
+    phase === "frame4"
+      ? 3
+      : phase === "frame5"
+        ? 4
+        : SAILING_SEQUENCE[seqStep % SAILING_SEQUENCE.length]
 
   return (
     <div
       className="relative h-16 w-[4.5rem] shrink-0 md:h-20 md:w-[5.5rem]"
       aria-hidden="true"
     >
-      <div
-        className="absolute inset-0 transition-opacity duration-300 ease-in-out"
-        style={{ opacity: sinkingShown ? 0 : 1 }}
-      >
-        {SAILING_SRC.map((src, i) => (
-          <img
-            key={src}
-            src={src}
-            alt=""
-            width={88}
-            height={80}
-            className={`ship-pixel-art absolute inset-0 m-auto h-full max-h-full w-full max-w-full object-contain object-center ${
-              sailingIndex === i ? "opacity-100" : "opacity-0"
-            }`}
-            style={{ transition: "none" }}
-            decoding="async"
-          />
-        ))}
-      </div>
-      <img
-        src={SINKING_SRC}
-        alt=""
-        width={88}
-        height={80}
-        className="ship-pixel-art absolute inset-0 m-auto h-full max-h-full w-full max-w-full object-contain object-center transition-opacity duration-300 ease-in-out"
-        style={{ opacity: sinkingShown ? 1 : 0 }}
-        decoding="async"
-      />
+      {FRAMES.map((src, i) => (
+        <img
+          key={src}
+          src={src}
+          alt=""
+          width={88}
+          height={80}
+          className={`ship-pixel-art absolute inset-0 m-auto h-full max-h-full w-full max-w-full object-contain object-center ${
+            displayIndex === i ? "opacity-100" : "opacity-0"
+          }`}
+          style={{ transition: "none" }}
+          decoding="async"
+        />
+      ))}
     </div>
   )
 }
