@@ -252,7 +252,7 @@ export function DeclareForm() {
               </span>
             </label>
 
-            <div className="mt-8 border border-[#39FF14]/80 bg-[#050505] px-2.5 py-1.5 shadow-[inset_0_0_10px_rgba(57,255,20,0.04)]">
+            <div className="mt-8 max-w-[400px] border border-[#39FF14]/80 bg-[#050505] px-2.5 py-1.5 text-left shadow-[inset_0_0_10px_rgba(57,255,20,0.04)]">
               <div
                 className="space-y-1 font-mono text-[10px] leading-tight text-[#39FF14] sm:text-[11px]"
                 style={{ fontFamily: '"IBM Plex Mono", monospace' }}
