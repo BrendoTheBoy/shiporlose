@@ -10,3 +10,6 @@ verify_jwt = false
 
 [functions.resolve-projects]
 verify_jwt = false
+
+[functions.sync-commits]
+verify_jwt = false

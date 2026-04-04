@@ -1,0 +1,25 @@
+# Calls the Supabase `sync-commits` Edge Function on a schedule so commit activity
+# stays fresh without the project owner visiting the site.
+#
+# Setup (GitHub repo → Settings → Secrets and variables → Actions):
+#   SYNC_URL — full POST URL, e.g.
+#     https://<project-ref>.supabase.co/functions/v1/sync-commits
+#   SYNC_SECRET — same value as SYNC_SECRET in Supabase Edge Function env (header auth).
+
+name: Sync commits (cron)
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+jobs:
+  sync-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST sync-commits
+        run: |
+          curl -X POST "${{ secrets.SYNC_URL }}" \
+            -H "X-Sync-Secret: ${{ secrets.SYNC_SECRET }}" \
+            -H "Content-Type: application/json" \
+            --fail --silent --show-error
