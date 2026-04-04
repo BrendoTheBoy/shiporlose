@@ -22,6 +22,17 @@ export type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+/** Persists GitHub OAuth token for server-side commit sync (only when Supabase includes provider_token on the session). */
+function persistGithubTokenForSync(session: Session | null): void {
+  const token = session?.provider_token
+  if (!token || !session?.user?.id) return
+  void supabase.rpc("upsert_github_token", { p_access_token: token }).then(
+    ({ error }) => {
+      if (error) console.error("upsert_github_token", error)
+    },
+  )
+}
+
 function githubUsernameFromUser(user: User | null): string | null {
   if (!user) return null
   const meta = user.user_metadata as Record<string, unknown> | undefined
@@ -50,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s)
       setUser(s?.user ?? null)
       setLoading(false)
+      persistGithubTokenForSync(s)
     })
     const {
       data: { subscription },
@@ -57,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(s)
       setUser(s?.user ?? null)
       setLoading(false)
+      persistGithubTokenForSync(s)
     })
     return () => {
       cancelled = true

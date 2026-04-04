@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { createClient, type User } from "npm:@supabase/supabase-js@2"
+import { createClient } from "npm:@supabase/supabase-js@2"
 
 const HEADER = "x-sync-secret"
 
@@ -16,29 +16,6 @@ const ghHeaders = (token: string) => ({
   Accept: "application/vnd.github+json",
   "X-GitHub-Api-Version": "2022-11-28",
 })
-
-function githubAccessTokenFromUser(user: User): string | null {
-  const meta = user.user_metadata as Record<string, unknown> | undefined
-  const fromMeta = meta?.provider_token
-  if (typeof fromMeta === "string" && fromMeta.length > 0) return fromMeta
-
-  const gh = user.identities?.find((i) => i.provider === "github")
-  if (!gh) return null
-
-  const id = gh as Record<string, unknown>
-  const fromIdentity = id.provider_token
-  if (typeof fromIdentity === "string" && fromIdentity.length > 0) {
-    return fromIdentity
-  }
-
-  const idData = gh.identity_data as Record<string, unknown> | undefined
-  const fromIdData = idData?.provider_token
-  if (typeof fromIdData === "string" && fromIdData.length > 0) {
-    return fromIdData
-  }
-
-  return null
-}
 
 async function fetchCommits(
   repoFullName: string,
@@ -138,28 +115,24 @@ Deno.serve(async (req) => {
     )
   }
 
-  const userCache = new Map<string, User | null>()
   const tokenCache = new Map<string, string | null>()
 
   async function getTokenForUser(userId: string): Promise<string | null> {
     if (tokenCache.has(userId)) return tokenCache.get(userId) ?? null
-    let user = userCache.get(userId)
-    if (user === undefined) {
-      const { data, error } = await supabase.auth.admin.getUserById(userId)
-      if (error || !data.user) {
-        console.error("getUserById", userId, error?.message)
-        userCache.set(userId, null)
-        tokenCache.set(userId, null)
-        return null
-      }
-      user = data.user
-      userCache.set(userId, user)
-    }
-    if (!user) {
+    const { data, error } = await supabase
+      .from("github_tokens")
+      .select("access_token")
+      .eq("user_id", userId)
+      .maybeSingle()
+    if (error) {
+      console.error("github_tokens", userId, error.message)
       tokenCache.set(userId, null)
       return null
     }
-    const token = githubAccessTokenFromUser(user)
+    const token =
+      data && typeof data.access_token === "string" && data.access_token.length > 0
+        ? data.access_token
+        : null
     tokenCache.set(userId, token)
     return token
   }

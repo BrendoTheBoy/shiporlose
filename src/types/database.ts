@@ -162,6 +162,23 @@ export type Database = {
         }>
         Relationships: []
       }
+      github_tokens: {
+        Row: {
+          user_id: string
+          access_token: string
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          access_token: string
+          updated_at?: string
+        }
+        Update: Partial<{
+          access_token: string
+          updated_at: string
+        }>
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: {
@@ -183,6 +200,10 @@ export type Database = {
           p_pool_month: string
         }
         Returns: string
+      }
+      upsert_github_token: {
+        Args: { p_access_token: string }
+        Returns: undefined
       }
     }
     Enums: Record<string, never>
