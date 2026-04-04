@@ -217,32 +217,40 @@
   white-space: nowrap;
 }
 
-.pixel-coin {
+/* ~32×32px: sail + mast + hull + dim wake (same box-shadow technique as old pixel-coin) */
+.pixel-ship {
   width: 4px;
   height: 4px;
   background: transparent;
   box-shadow:
-    8px 0 #39ff14,
     12px 0 #39ff14,
     16px 0 #39ff14,
-    4px 4px #39ff14,
-    8px 4px #0a3d0a,
-    12px 4px #0a3d0a,
+    8px 4px #39ff14,
+    12px 4px #39ff14,
     16px 4px #39ff14,
     20px 4px #39ff14,
-    0 8px #39ff14,
     4px 8px #39ff14,
     8px 8px #39ff14,
-    12px 8px #ff6b00,
+    12px 8px #39ff14,
     16px 8px #39ff14,
     20px 8px #39ff14,
     24px 8px #39ff14,
-    4px 12px #39ff14,
-    8px 12px #0a3d0a,
-    12px 12px #0a3d0a,
-    16px 12px #0a3d0a,
-    20px 12px #39ff14,
-    8px 16px #39ff14,
+    12px 12px #39ff14,
+    16px 12px #39ff14,
     12px 16px #39ff14,
-    16px 16px #39ff14;
+    16px 16px #39ff14,
+    0 20px #39ff14,
+    4px 20px #39ff14,
+    8px 20px #39ff14,
+    12px 20px #39ff14,
+    16px 20px #39ff14,
+    20px 20px #39ff14,
+    24px 20px #39ff14,
+    0 24px #39ff14,
+    4px 24px #39ff14,
+    8px 24px #39ff14,
+    12px 24px #39ff14,
+    16px 24px #39ff14,
+    20px 24px #39ff14,
+    24px 24px #39ff14;
 }

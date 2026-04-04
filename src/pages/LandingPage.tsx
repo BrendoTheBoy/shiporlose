@@ -6,8 +6,6 @@ import { Footer } from "../components/Footer"
 import { Hero } from "../components/Hero"
 import { HowItWorks } from "../components/HowItWorks"
 import { LiveProjects } from "../components/LiveProjects"
-import { PixelDecor } from "../components/PixelDecor"
-
 export function LandingPage() {
   const location = useLocation()
 
@@ -28,7 +26,6 @@ export function LandingPage() {
         Skip to declaration
       </a>
       <div className="relative mx-auto max-w-[1100px]">
-        <PixelDecor />
         <Hero />
         <HowItWorks />
         <LiveProjects />
