@@ -4,7 +4,6 @@ import { FunctionsHttpError } from "@supabase/supabase-js"
 import { useAuth } from "../context/AuthContext"
 import { useUserProjectsFeed } from "../context/UserProjectsFeedContext"
 import { supabase } from "../lib/supabase"
-import { AsciiDivider } from "./AsciiDivider"
 import { RepoSelect } from "./RepoSelect"
 import type { GitHubRepo } from "../lib/github"
 
@@ -131,8 +130,7 @@ export function DeclareForm() {
       id="declare"
       className="scroll-mt-[5.75rem] border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20"
     >
-      <AsciiDivider label="DECLARE YOUR PROJECT" />
-      <h2 className="font-display mt-4 mb-8 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
+      <h2 className="font-display mb-8 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
         DECLARE YOUR PROJECT
       </h2>
       <div className="mx-auto max-w-2xl">

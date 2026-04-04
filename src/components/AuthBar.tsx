@@ -65,24 +65,6 @@ export function AuthBar() {
 
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
-      <div className="flex items-center gap-2 min-w-0">
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt=""
-            className="h-8 w-8 shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] object-cover"
-            width={32}
-            height={32}
-          />
-        ) : (
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-[#39FF14] bg-[#0a0a0a] font-mono text-[10px] text-[#39FF14]">
-            GH
-          </span>
-        )}
-        <span className="font-mono text-[10px] uppercase text-[#39FF14] truncate max-w-[100px] sm:max-w-[160px]">
-          {githubUsername ?? user.email ?? "signed in"}
-        </span>
-      </div>
       {myProjectId ? (
         <Link
           to={`/project/${myProjectId}`}
@@ -106,6 +88,24 @@ export function AuthBar() {
       >
         LOGOUT
       </button>
+      <div className="flex min-w-0 items-center gap-2">
+        {avatarUrl ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            className="h-8 w-8 shrink-0 border-2 border-[#39FF14] bg-[#0a0a0a] object-cover"
+            width={32}
+            height={32}
+          />
+        ) : (
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-[#39FF14] bg-[#0a0a0a] font-mono text-[10px] text-[#39FF14]">
+            GH
+          </span>
+        )}
+        <span className="max-w-[100px] truncate font-mono text-[10px] uppercase text-[#39FF14] sm:max-w-[160px]">
+          {githubUsername ?? user.email ?? "signed in"}
+        </span>
+      </div>
     </div>
   )
 }

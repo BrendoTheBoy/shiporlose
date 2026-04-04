@@ -1,5 +1,3 @@
-import { AsciiDivider } from "./AsciiDivider"
-
 const steps = [
   {
     key: "01",
@@ -26,8 +24,7 @@ const steps = [
 export function HowItWorks() {
   return (
     <section className="border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20">
-      <AsciiDivider label="HOW IT WORKS" />
-      <h2 className="font-display mt-4 mb-10 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
+      <h2 className="font-display mb-10 text-center text-[11px] text-[#39FF14] sm:text-xs md:text-sm">
         HOW IT WORKS
       </h2>
       <div className="mx-auto max-w-5xl">
