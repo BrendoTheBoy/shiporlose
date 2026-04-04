@@ -1,8 +1,10 @@
 import { Route, Routes, useParams } from "react-router-dom"
-import { AuthBar } from "./components/AuthBar"
 import { PaymentRedirectBanner } from "./components/PaymentRedirectBanner"
+import { SiteHeader } from "./components/SiteHeader"
 import { LandingPage } from "./pages/LandingPage"
 import { ProjectPage } from "./pages/ProjectPage"
+import { WallOfFamePage } from "./pages/WallOfFamePage"
+import { WallOfShamePage } from "./pages/WallOfShamePage"
 
 /** Remount when `:id` changes so project state never shows the wrong id. */
 function ProjectPageRoute() {
@@ -14,13 +16,15 @@ function App() {
   return (
     <div className="crt-wrap min-h-dvh">
       <PaymentRedirectBanner />
-      <div className="fixed right-3 top-3 z-[10000] max-w-[min(100vw-1.5rem,420px)] md:right-6 md:top-6">
-        <AuthBar />
-      </div>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/project/:id" element={<ProjectPageRoute />} />
-      </Routes>
+      <SiteHeader />
+      <main className="pt-14 md:pt-16">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/fame" element={<WallOfFamePage />} />
+          <Route path="/shame" element={<WallOfShamePage />} />
+          <Route path="/project/:id" element={<ProjectPageRoute />} />
+        </Routes>
+      </main>
     </div>
   )
 }
