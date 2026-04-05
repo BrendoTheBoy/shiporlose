@@ -374,7 +374,7 @@ export function ProjectPage() {
     return (
       <div className="relative mx-auto max-w-[800px] px-3 py-12 md:px-5">
         <Helmet>
-          <title>Project not found — ShipOrLose</title>
+          <title>Project not found — Ship Or Lose</title>
         </Helmet>
         <Link
           to="/"
@@ -450,8 +450,8 @@ export function ProjectPage() {
   return (
     <div className="relative mx-auto max-w-[800px] px-3 pb-16 pt-6 md:px-5 md:pt-8">
       <Helmet>
-        <title>{`${project.project_name} — ShipOrLose`}</title>
-        <meta property="og:title" content={`${project.project_name} — ShipOrLose`} />
+        <title>{`${project.project_name} — Ship Or Lose`}</title>
+        <meta property="og:title" content={`${project.project_name} — Ship Or Lose`} />
         <meta property="og:description" content={ogDesc} />
         <meta property="og:url" content={canonicalUrl} />
         <meta name="description" content={ogDesc} />

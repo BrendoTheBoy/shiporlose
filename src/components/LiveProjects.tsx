@@ -35,44 +35,6 @@ const FEED_STATUSES: ProjectStatus[] = [
   "abandoned",
 ]
 
-const MOCK: {
-  name: string
-  description: string
-  shippedMeans: string
-  daysLeft: number
-  stake: number
-  progress: number
-  atRisk: boolean
-}[] = [
-  {
-    name: "ReceiptFax",
-    description: "CLI that turns photos of receipts into structured CSV.",
-    shippedMeans: "npm publish + 10 real users on the waitlist.",
-    daysLeft: 18,
-    stake: 50,
-    progress: 0.4,
-    atRisk: false,
-  },
-  {
-    name: "PanicBoard",
-    description: "Kanban for solo devs with brutal deadline mode.",
-    shippedMeans: "Live URL + Stripe test mode checkout working.",
-    daysLeft: 9,
-    stake: 30,
-    progress: 0.7,
-    atRisk: false,
-  },
-  {
-    name: "ASCIIWeather",
-    description: "Retro terminal weather API wrapper with pixel icons.",
-    shippedMeans: "Public API key + docs page shipped.",
-    daysLeft: 24,
-    stake: 20,
-    progress: 0.2,
-    atRisk: true,
-  },
-]
-
 export function LiveProjects() {
   const { user, githubAccessToken } = useAuth()
   const navigate = useNavigate()
@@ -247,7 +209,7 @@ export function LiveProjects() {
     return [...mine, ...others]
   }, [rows, user?.id])
 
-  const showMock = !loading && rows.length === 0 && !fetchErr
+  const showEmpty = !loading && rows.length === 0 && !fetchErr
 
   return (
     <section className="border-b-2 border-[#1f1f1f] px-4 py-16 md:px-8 md:py-20">
@@ -263,6 +225,12 @@ export function LiveProjects() {
         {fetchErr && (
           <p className="font-mono mb-6 text-center text-xs text-red-400">
             {fetchErr}
+          </p>
+        )}
+
+        {showEmpty && (
+          <p className="font-mono text-center text-xs text-[#888]">
+            No active projects yet. Be the first to declare.
           </p>
         )}
 
@@ -495,75 +463,6 @@ export function LiveProjects() {
                 </div>
               )
             })}
-
-          {showMock &&
-            MOCK.map((p) => (
-              <article
-                key={p.name}
-                className={`card-lift flex flex-col border-2 border-dashed border-[#333] bg-[#0d0d0d] p-5 opacity-90 shadow-[4px_4px_0_#111] ${
-                  p.atRisk ? "border-[#FF6B00]" : "border-[#333]"
-                }`}
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="font-mono text-[9px] uppercase text-[#666]">
-                    demo
-                  </span>
-                  {p.atRisk && (
-                    <span className="font-mono text-[10px] uppercase text-[#FF6B00]">
-                      ⚠ AT RISK
-                    </span>
-                  )}
-                </div>
-                <div className="mb-2 flex min-w-0 flex-1 items-center gap-2">
-                  <span
-                    className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-[#39FF14] bg-[#0a0a0a] font-mono text-[10px] font-semibold uppercase leading-none text-[#39FF14]"
-                    aria-hidden="true"
-                  >
-                    {p.name.slice(0, 2).toUpperCase()}
-                  </span>
-                  <h3 className="font-display min-w-0 text-[10px] text-[#39FF14] sm:text-[11px]">
-                    {p.name}
-                  </h3>
-                </div>
-                <p className="font-body text-sm text-[#c4c4c4]">
-                  {p.description}
-                </p>
-                <p className="font-body mt-2 border-l-2 border-[#FF6B00] pl-2 text-xs text-[#888]">
-                  <span className="text-[#666]">Shipped means:</span>{" "}
-                  {p.shippedMeans}
-                </p>
-                <div className="mt-3 font-mono text-[10px] text-[#555]">
-                  <p>&gt; abc1237 &quot;example commit&quot; — 2h ago</p>
-                  <p>&gt; def4561 &quot;another line&quot; — 1d ago</p>
-                </div>
-                <dl className="mt-4 grid grid-cols-3 gap-2 font-mono text-[11px] md:text-xs">
-                  <div className="border border-[#2a2a2a] bg-[#080808] p-2">
-                    <dt className="text-[#666]">Days left</dt>
-                    <dd className="text-lg font-semibold tabular-nums text-[#39FF14]">
-                      {p.daysLeft}
-                    </dd>
-                  </div>
-                  <div className="border border-[#2a2a2a] bg-[#080808] p-2">
-                    <dt className="text-[#666]">Stake</dt>
-                    <dd className="text-lg font-semibold tabular-nums text-[#FF6B00]">
-                      ${p.stake}
-                    </dd>
-                  </div>
-                  <div className="border border-[#2a2a2a] bg-[#080808] p-2">
-                    <dt className="text-[#666]">Commits</dt>
-                    <dd className="text-lg font-semibold tabular-nums text-[#39FF14]">
-                      —
-                    </dd>
-                  </div>
-                </dl>
-                <div className="mt-auto pt-4">
-                  <p className="font-mono mb-1 text-[10px] uppercase text-[#666]">
-                    {Math.round(p.progress * 100)}% of window elapsed
-                  </p>
-                  <ProgressBar value={p.progress} atRisk={p.atRisk} />
-                </div>
-              </article>
-            ))}
         </div>
       </div>
     </section>

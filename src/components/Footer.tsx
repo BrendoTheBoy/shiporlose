@@ -21,11 +21,19 @@ export function Footer() {
         </Link>
       </p>
       <p className="font-body mx-auto mb-4 max-w-xl text-xs leading-relaxed text-[#FF6B00]">
-        ShipOrLose is the first project shipped using ShipOrLose.
+        Ship Or Lose is the first project shipped using Ship Or Lose.
       </p>
       <p className="font-body mx-auto max-w-xl text-xs leading-relaxed text-[#666]">
-        Built in one weekend by Brendan McGrath. Yes, I used ShipOrLose to ship
-        ShipOrLose.
+        Built in one weekend by{" "}
+        <a
+          href="https://github.com/BrendoTheBoy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#888] underline decoration-[#444] underline-offset-4 transition-colors hover:text-[#aaa] hover:decoration-[#666]"
+        >
+          @BrendoTheBoy
+        </a>
+        . Yes, I used Ship Or Lose to ship Ship Or Lose.
       </p>
       <p className="mt-4">
         <a

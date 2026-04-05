@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
           price_data: {
             currency: "usd",
             product_data: {
-              name: "ShipOrLose Entry — $20 stake + $10 pool",
+              name: "Ship Or Lose Entry — $20 stake + $10 pool",
             },
             unit_amount: 3000,
           },

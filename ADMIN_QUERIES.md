@@ -1,4 +1,4 @@
-# ShipOrLose — manual admin SQL (Supabase SQL Editor)
+# Ship Or Lose — manual admin SQL (Supabase SQL Editor)
 
 Run these in the Supabase SQL Editor when you need to review flagged projects or inspect payouts. Replace placeholders in angle brackets.
 

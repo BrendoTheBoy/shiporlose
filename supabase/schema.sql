@@ -1,4 +1,4 @@
--- ShipOrLose — run in Supabase SQL editor (or migrate via CLI)
+-- Ship Or Lose — run in Supabase SQL editor (or migrate via CLI)
 -- Enable pgcrypto for gen_random_uuid (usually enabled on Supabase)
 
 -- ---------------------------------------------------------------------------

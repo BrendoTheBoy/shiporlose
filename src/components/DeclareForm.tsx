@@ -194,7 +194,7 @@ export function DeclareForm() {
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
                 className="terminal-input terminal-caret-line mt-2 w-full border-2 border-[#1a3d1a] bg-[#0a0a0a] px-3 py-2 font-mono text-sm text-[#39FF14] placeholder:text-[#2a4a2a]"
-                placeholder="e.g. ShipOrLose, ReceiptFax, PanicBoard"
+                placeholder="e.g. Ship Or Lose, ReceiptFax, PanicBoard"
                 autoComplete="off"
               />
               <span className="mt-1 block text-right font-mono text-[10px] text-[#555]">
@@ -257,36 +257,52 @@ export function DeclareForm() {
                 className="space-y-1 font-mono text-[10px] leading-tight text-[#39FF14] sm:text-[11px]"
                 style={{ fontFamily: '"IBM Plex Mono", monospace' }}
               >
-                <div className="flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5">
-                  <span className="shrink-0 text-[#888]">COMMITMENT STAKE</span>
-                  <span
-                    className="mb-0.5 min-h-[1px] min-w-[0.5rem] flex-1 border-b border-dotted border-[#2a4a2a]"
-                    aria-hidden
-                  />
-                  <span className="shrink-0 tabular-nums">$20</span>
-                  <span className="w-full shrink-0 text-[9px] text-[#555] sm:w-auto sm:pl-1">
-                    (returned if you ship)
-                  </span>
-                </div>
-                <div className="flex min-w-0 flex-wrap items-baseline gap-x-1 gap-y-0.5">
-                  <span className="shrink-0 text-[#888]">POOL ENTRY FEE</span>
-                  <span
-                    className="mb-0.5 min-h-[1px] min-w-[0.5rem] flex-1 border-b border-dotted border-[#2a4a2a]"
-                    aria-hidden
-                  />
-                  <span className="shrink-0 tabular-nums">$10</span>
-                  <span className="w-full shrink-0 text-[9px] text-[#555] sm:w-auto sm:pl-1">
-                    (split among winners)
-                  </span>
-                </div>
-                <div className="border-t border-[#1a3d1a] pt-1">
-                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-1">
-                    <span className="shrink-0 font-semibold text-[#888]">TOTAL</span>
+                <div>
+                  <div className="flex min-w-0 items-baseline gap-x-1">
+                    <span className="w-[11.5rem] shrink-0 text-[#888] sm:w-[12.5rem]">
+                      COMMITMENT STAKE
+                    </span>
                     <span
                       className="mb-0.5 min-h-[1px] min-w-[0.5rem] flex-1 border-b border-dotted border-[#2a4a2a]"
                       aria-hidden
                     />
-                    <span className="shrink-0 tabular-nums font-semibold">$30</span>
+                    <span className="w-[2.25rem] shrink-0 text-right tabular-nums sm:w-[2.5rem]">
+                      $20
+                    </span>
+                  </div>
+                  <span className="mt-0.5 block text-[9px] text-[#555]">
+                    (returned if you ship)
+                  </span>
+                </div>
+                <div>
+                  <div className="flex min-w-0 items-baseline gap-x-1">
+                    <span className="w-[11.5rem] shrink-0 text-[#888] sm:w-[12.5rem]">
+                      POOL ENTRY FEE
+                    </span>
+                    <span
+                      className="mb-0.5 min-h-[1px] min-w-[0.5rem] flex-1 border-b border-dotted border-[#2a4a2a]"
+                      aria-hidden
+                    />
+                    <span className="w-[2.25rem] shrink-0 text-right tabular-nums sm:w-[2.5rem]">
+                      $10
+                    </span>
+                  </div>
+                  <span className="mt-0.5 block text-[9px] text-[#555]">
+                    (split among winners)
+                  </span>
+                </div>
+                <div className="border-t border-[#1a3d1a] pt-1">
+                  <div className="flex min-w-0 items-baseline gap-x-1">
+                    <span className="w-[11.5rem] shrink-0 font-semibold text-[#888] sm:w-[12.5rem]">
+                      TOTAL
+                    </span>
+                    <span
+                      className="mb-0.5 min-h-[1px] min-w-[0.5rem] flex-1 border-b border-dotted border-[#2a4a2a]"
+                      aria-hidden
+                    />
+                    <span className="w-[2.25rem] shrink-0 text-right tabular-nums font-semibold sm:w-[2.5rem]">
+                      $30
+                    </span>
                   </div>
                 </div>
               </div>

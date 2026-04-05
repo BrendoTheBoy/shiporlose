@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { GitHubRepo } from "../lib/github"
 import { fetchUserRepos } from "../lib/github"
 
@@ -21,6 +21,15 @@ export function RepoSelect({
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState("")
   const wrapRef = useRef<HTMLDivElement>(null)
+  /** Ignore the next toggle click (e.g. ghost click-through after closing the list). */
+  const ignoreToggleUntilRef = useRef(0)
+
+  const selectRepo = useCallback((r: GitHubRepo) => {
+    onChange(r)
+    setOpen(false)
+    setFilter("")
+    ignoreToggleUntilRef.current = Date.now() + 400
+  }, [onChange])
 
   useEffect(() => {
     if (!accessToken || !open) return
@@ -69,7 +78,10 @@ export function RepoSelect({
       <button
         type="button"
         disabled={disabled || !accessToken}
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (Date.now() < ignoreToggleUntilRef.current) return
+          setOpen((o) => !o)
+        }}
         className="terminal-input flex w-full cursor-pointer items-center justify-between border-2 border-[#1a3d1a] bg-[#0a0a0a] px-3 py-2 text-left font-mono text-sm text-[#39FF14] disabled:cursor-not-allowed disabled:opacity-50"
       >
         <span className="truncate">
@@ -104,10 +116,9 @@ export function RepoSelect({
                 <button
                   key={r.id}
                   type="button"
-                  onClick={() => {
-                    onChange(r)
-                    setOpen(false)
-                    setFilter("")
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    selectRepo(r)
                   }}
                   className="block w-full border-b border-[#1a1a1a] px-3 py-2 text-left text-[#39FF14] hover:bg-[#0d120d]"
                 >

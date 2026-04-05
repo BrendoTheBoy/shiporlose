@@ -64,9 +64,9 @@ export function WallOfFamePage() {
   return (
     <div className="relative mx-auto max-w-5xl px-4 pb-20 pt-6 md:px-8 md:pt-8">
       <Helmet>
-        <title>Wall of Fame — ShipOrLose</title>
+        <title>Wall of Fame — Ship Or Lose</title>
         <meta name="description" content="Builders who put money on the line and shipped." />
-        <meta property="og:title" content="Wall of Fame — ShipOrLose" />
+        <meta property="og:title" content="Wall of Fame — Ship Or Lose" />
         <meta
           property="og:description"
           content="Builders who put money on the line and shipped."

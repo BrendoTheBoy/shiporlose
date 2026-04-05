@@ -68,12 +68,12 @@ export function WallOfShamePage() {
   return (
     <div className="relative mx-auto max-w-5xl px-4 pb-20 pt-6 md:px-8 md:pt-8">
       <Helmet>
-        <title>Wall of Shame — ShipOrLose</title>
+        <title>Wall of Shame — Ship Or Lose</title>
         <meta
           name="description"
           content="Projects that never shipped. Don't end up here."
         />
-        <meta property="og:title" content="Wall of Shame — ShipOrLose" />
+        <meta property="og:title" content="Wall of Shame — Ship Or Lose" />
         <meta
           property="og:description"
           content="Projects that never shipped. Don't end up here."

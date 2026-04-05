@@ -1,4 +1,4 @@
-# Stripe + Supabase Edge Functions (ShipOrLose)
+# Stripe + Supabase Edge Functions (Ship Or Lose)
 
 This project charges **$30** per declaration via **Stripe Checkout**. The Stripe **secret key** and **webhook secret** live only in Supabase (Edge Function secrets), never in the Vite app.
 
