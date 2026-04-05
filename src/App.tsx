@@ -5,6 +5,7 @@ import { LandingPage } from "./pages/LandingPage"
 import { ProjectPage } from "./pages/ProjectPage"
 import { WallOfFamePage } from "./pages/WallOfFamePage"
 import { WallOfShamePage } from "./pages/WallOfShamePage"
+import { TermsPage } from "./pages/TermsPage"
 
 /** Remount when `:id` changes so project state never shows the wrong id. */
 function ProjectPageRoute() {
@@ -22,6 +23,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/fame" element={<WallOfFamePage />} />
           <Route path="/shame" element={<WallOfShamePage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="/project/:id" element={<ProjectPageRoute />} />
         </Routes>
       </main>

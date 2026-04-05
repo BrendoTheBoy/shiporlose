@@ -43,6 +43,7 @@ export function DeclareForm() {
   const [repo, setRepo] = useState<GitHubRepo | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [tosAccepted, setTosAccepted] = useState(false)
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -60,6 +61,10 @@ export function DeclareForm() {
     const ship = shipped.trim()
     if (!name || !desc || !ship) {
       setError("Fill all required fields.")
+      return
+    }
+    if (!tosAccepted) {
+      setError("You must agree to the Terms of Service to continue.")
       return
     }
 
@@ -317,10 +322,31 @@ export function DeclareForm() {
               </p>
             )}
 
+            <label className="font-mono mt-8 flex cursor-pointer items-start gap-3 text-xs leading-relaxed text-[#b8e8c8]">
+              <input
+                type="checkbox"
+                checked={tosAccepted}
+                onChange={(e) => setTosAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded-none border-2 border-[#39FF14] bg-[#0a0a0a] accent-[#39FF14] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#39FF14]"
+              />
+              <span>
+                I agree to the{" "}
+                <Link
+                  to="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#39FF14] underline decoration-[#39FF14]/35 underline-offset-4 hover:text-[#5cff4a]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Terms of Service
+                </Link>
+              </span>
+            </label>
+
             <button
               type="submit"
-              disabled={submitting}
-              className="glitch-btn font-display mt-8 w-full border-2 border-[#FF6B00] bg-[#0a0a0a] py-4 text-[9px] uppercase leading-relaxed text-[#FF6B00] disabled:opacity-50 sm:text-[10px]"
+              disabled={submitting || !tosAccepted}
+              className="glitch-btn font-display mt-6 w-full border-2 border-[#FF6B00] bg-[#0a0a0a] py-4 text-[9px] uppercase leading-relaxed text-[#FF6B00] disabled:cursor-not-allowed disabled:opacity-35 sm:text-[10px]"
             >
               {submitting
                 ? "OPENING CHECKOUT…"

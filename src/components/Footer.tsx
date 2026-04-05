@@ -14,6 +14,15 @@ export function Footer() {
           |
         </span>
         <Link
+          to="/terms"
+          className="text-[#39FF14] underline decoration-[#39FF14]/35 underline-offset-4 hover:text-[#5cff4a]"
+        >
+          TERMS
+        </Link>
+        <span className="text-[#333]" aria-hidden="true">
+          |
+        </span>
+        <Link
           to="/shame"
           className="text-red-500 underline decoration-red-500/35 underline-offset-4 hover:text-red-400"
         >
