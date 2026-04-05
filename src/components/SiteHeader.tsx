@@ -4,7 +4,7 @@ import { AuthBar } from "./AuthBar"
 import { SignalModal } from "./SignalModal"
 
 const navBoxGreen =
-  "shrink-0 border-2 border-[#39FF14] bg-[#050805] px-2 py-1 font-mono text-[7px] font-bold uppercase tracking-wide text-[#39FF14] shadow-[inset_0_0_8px_rgba(57,255,20,0.06)] transition-colors hover:bg-[#0a120a] sm:text-[8px]"
+  "inline-flex shrink-0 items-center justify-center border-2 border-[#39FF14] bg-[#050805] px-2 py-1 font-mono text-[7px] font-bold uppercase leading-none tracking-wide text-[#39FF14] shadow-[inset_0_0_8px_rgba(57,255,20,0.06)] transition-colors hover:bg-[#0a120a] sm:text-[8px]"
 
 const wallsDropdownLinkBase =
   "block w-full px-3 py-2 text-left font-mono text-[8px] font-bold uppercase tracking-wide transition-colors sm:text-[9px]"
@@ -36,10 +36,13 @@ export function SiteHeader() {
       className="fixed left-0 right-0 top-0 z-[10000] flex min-h-[52px] items-center justify-between gap-3 border-b border-[#1a1a1a] bg-[#0a0a0a]/92 px-3 py-2.5 backdrop-blur-sm md:px-6"
     >
       <nav
-        className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-2.5"
+        className="flex min-w-0 flex-nowrap items-center gap-2 sm:gap-2.5"
         aria-label="Site"
       >
-        <div ref={wallsRef} className="relative shrink-0">
+        <div
+          ref={wallsRef}
+          className="relative flex shrink-0 items-center self-center"
+        >
           <button
             type="button"
             className={navBoxGreen}
@@ -79,7 +82,7 @@ export function SiteHeader() {
         </div>
         <button
           type="button"
-          className={navBoxGreen}
+          className={`${navBoxGreen} self-center`}
           onClick={() => setSignalOpen(true)}
         >
           SIGNAL
