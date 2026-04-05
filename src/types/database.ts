@@ -205,6 +205,14 @@ export type Database = {
         Args: { p_access_token: string }
         Returns: undefined
       }
+      claim_shipped: {
+        Args: { p_project_id: string; p_proof_url: string }
+        Returns: string
+      }
+      submit_payout_email: {
+        Args: { p_project_id: string; p_email: string }
+        Returns: undefined
+      }
     }
     Enums: Record<string, never>
     CompositeTypes: Record<string, never>

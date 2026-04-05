@@ -67,10 +67,10 @@ export function PayoutEmailSection({
     }
     setSaving(true)
     setErr(null)
-    const { error } = await supabase
-      .from("projects")
-      .update({ payout_email: trimmed })
-      .eq("id", project.id)
+    const { error } = await supabase.rpc("submit_payout_email", {
+      p_project_id: project.id,
+      p_email: trimmed,
+    })
     setSaving(false)
     if (error) {
       setErr(error.message)

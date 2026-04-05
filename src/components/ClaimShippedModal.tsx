@@ -58,14 +58,10 @@ export function ClaimShippedModal({
     }
     setSaving(true)
     setErr(null)
-    const { error } = await supabase
-      .from("projects")
-      .update({
-        status: "pending_review",
-        proof_url: url,
-        review_started_at: new Date().toISOString(),
-      })
-      .eq("id", projectId)
+    const { error } = await supabase.rpc("claim_shipped", {
+      p_project_id: projectId,
+      p_proof_url: url,
+    })
 
     setSaving(false)
     if (error) {
