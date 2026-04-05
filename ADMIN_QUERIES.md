@@ -122,3 +122,11 @@ UPDATE projects SET payout_sent = true, payout_amount = <AMOUNT> WHERE id = '<PR
 ```sql
 UPDATE projects SET payout_sent = true WHERE status = 'shipped' AND payout_sent = false AND payout_email IS NOT NULL AND date_trunc('month', deadline) = '<YYYY-MM-01>';
 ```
+
+---
+
+## 8. View all signals
+
+```sql
+SELECT id, github_username, type, message, email, created_at FROM signals ORDER BY created_at DESC;
+```

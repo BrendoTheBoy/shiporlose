@@ -103,6 +103,28 @@ export type PoolRow = {
   created_at: string
 }
 
+export type SignalType = "bug" | "suggestion" | "other"
+
+export type SignalRow = {
+  id: string
+  user_id: string | null
+  github_username: string | null
+  type: SignalType
+  message: string
+  email: string | null
+  created_at: string
+}
+
+export type SignalInsert = {
+  id?: string
+  user_id?: string | null
+  github_username?: string | null
+  type: SignalType
+  message: string
+  email?: string | null
+  created_at?: string
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -177,6 +199,12 @@ export type Database = {
           access_token: string
           updated_at: string
         }>
+        Relationships: []
+      }
+      signals: {
+        Row: SignalRow
+        Insert: SignalInsert
+        Update: Partial<SignalInsert>
         Relationships: []
       }
     }

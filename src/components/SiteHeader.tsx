@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { AuthBar } from "./AuthBar"
+import { SignalModal } from "./SignalModal"
 
 const navBoxGreen =
   "shrink-0 border-2 border-[#39FF14] bg-[#050805] px-2 py-1 font-mono text-[7px] font-bold uppercase tracking-wide text-[#39FF14] shadow-[inset_0_0_8px_rgba(57,255,20,0.06)] transition-colors hover:bg-[#0a120a] sm:text-[8px]"
@@ -10,6 +11,7 @@ const wallsDropdownLinkBase =
 
 export function SiteHeader() {
   const [wallsOpen, setWallsOpen] = useState(false)
+  const [signalOpen, setSignalOpen] = useState(false)
   const wallsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -75,7 +77,15 @@ export function SiteHeader() {
             </div>
           ) : null}
         </div>
+        <button
+          type="button"
+          className={navBoxGreen}
+          onClick={() => setSignalOpen(true)}
+        >
+          SIGNAL
+        </button>
       </nav>
+      <SignalModal open={signalOpen} onClose={() => setSignalOpen(false)} />
       <div className="max-w-[min(100vw-8rem,420px)] shrink-0">
         <AuthBar />
       </div>
