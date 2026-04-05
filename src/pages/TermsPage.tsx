@@ -275,11 +275,11 @@ export function TermsPage() {
             </h2>
             <ul className="list-disc space-y-2 pl-5">
               <li>
-                These terms are governed by the laws of the Province of Alberta,
+                These terms are governed by the laws of the Province of Ontario,
                 Canada.
               </li>
               <li>
-                Any disputes will be resolved in the courts of Alberta, Canada.
+                Any disputes will be resolved in the courts of Ontario, Canada.
               </li>
             </ul>
           </section>
